@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Despertador Sordo</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="header">
+    <h1>&#9201; Despertador Sordo</h1>
+    <p>Configuracion WiFi del Emisor</p>
+  </div>
+
+  <form action="/save" method="POST">
+    <div class="card">
+      <div class="card-title">&#128246; Red WiFi</div>
+
+      <label for="ssid">Nombre de red (SSID)</label>
+      <input type="text" id="ssid" name="ssid"
+             placeholder="Mi red WiFi"
+             value="%SSID%"
+             autocomplete="off"
+             required>
+
+      <label for="password">Contrasena</label>
+      <input type="password" id="password" name="password"
+             placeholder="Contrasena del WiFi"
+             autocomplete="off">
+
+      <label class="show-pw">
+        <input type="checkbox" onclick="togglePassword()">
+        Mostrar contrasena
+      </label>
+    </div>
+
+    <button type="submit" class="btn-save">&#128190; Guardar y Conectar</button>
+  </form>
+
+  %FLASH%
+
+  <div class="status-card">
+    <div class="status-header">
+      <span class="status-dot %DOT_CLASS%" id="status-dot"></span>
+      <span class="status-label" id="status-label">%STATUS_LABEL%</span>
+    </div>
+    <div class="status-text" id="status-text">%STATUS_TEXT%</div>
+    <div class="status-ip"   id="status-ip">%STATUS_IP%</div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
