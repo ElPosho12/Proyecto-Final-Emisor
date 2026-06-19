@@ -1,6 +1,10 @@
 #include "alarm_manager.h"
 #include "display_manager.h"
 #include <Preferences.h>
+#include <Adafruit_ILI9341.h> 
+
+// Traemos el objeto original tft
+extern Adafruit_ILI9341 tft; 
 
 // ─── Variables globales ───────────────────────────────────────────────────────
 AlarmState alarmState   = STATE_CONFIRM_PREVIOUS;
@@ -9,9 +13,6 @@ int  alarmMinute        = 0;
 bool alarmFired         = false;
 bool alarmEnabled       = false;
 
-// Bandera que main.cpp lee para enviar '2' por BT y apagar el oxímetro del receptor.
-// Se pone en true cuando + y − se presionan juntos en STATE_ACTIVE.
-// main.cpp la baja a false después de enviar el carácter.
 bool comboPlusMinusPressed = false;
 
 // Valor temporal mientras el usuario configura
@@ -29,15 +30,10 @@ static unsigned long lastPressEnter         = 0;
 #define REPEAT_INTERVAL   120   // ms de cambio al mantener apretado
 
 // ─── Detección de Combo +/− simultáneos ──────────────────────────────────────
-//
-// Para evitar falsos positivos se exige que AMBOS botones estén LOW al mismo
-// tiempo durante al menos COMBO_HOLD_MS milisegundos. Una vez detectado, el
-// combo no vuelve a dispararse hasta que el usuario suelta los dos botones.
-//
 #define COMBO_HOLD_MS  150   // ms que deben mantenerse juntos para confirmar combo
 
-static unsigned long comboStartTime  = 0;   // momento en que ambos estuvieron LOW juntos
-static bool          comboFired      = false; // evita disparos repetidos sin soltar
+static unsigned long comboStartTime  = 0;   
+static bool          comboFired      = false; 
 
 static bool detectCombo() {
   bool plusLow  = (digitalRead(BTN_PLUS)  == LOW);
@@ -45,14 +41,13 @@ static bool detectCombo() {
 
   if (plusLow && minusLow) {
     if (comboStartTime == 0) {
-      comboStartTime = millis();   // empezar a cronometrar
+      comboStartTime = millis();   
     }
     if (!comboFired && (millis() - comboStartTime >= COMBO_HOLD_MS)) {
       comboFired = true;
-      return true;   // combo confirmado
+      return true;   
     }
   } else {
-    // Al soltar cualquiera de los dos, resetear
     comboStartTime = 0;
     comboFired     = false;
   }
@@ -61,7 +56,6 @@ static bool detectCombo() {
 
 // ─── Control Fluido de Botón Más (+) ─────────────────────────────────────────
 static bool handlePlusFluido() {
-  // Si el otro botón también está apretado → es combo, no acción individual
   if (digitalRead(BTN_MINUS) == LOW) return false;
 
   unsigned long now = millis();
@@ -84,7 +78,6 @@ static bool handlePlusFluido() {
 
 // ─── Control Fluido de Botón Menos (-) ───────────────────────────────────────
 static bool handleMinusFluido() {
-  // Si el otro botón también está apretado → es combo, no acción individual
   if (digitalRead(BTN_PLUS) == LOW) return false;
 
   unsigned long now = millis();
@@ -158,20 +151,14 @@ void alarmManagerInit() {
 
 // ─── Bucle Principal del Administrador de Alarma ─────────────────────────────
 void alarmManagerLoop(struct tm timeinfo) {
-
-  // ── Detección de combo +/− — tiene prioridad absoluta, solo en STATE_ACTIVE ─
-  // En otros estados el combo tiene significado propio (navegar entre pantallas)
-  // por lo que no lo interceptamos ahí.
   if (alarmState == STATE_ACTIVE && detectCombo()) {
-    comboPlusMinusPressed = true;   // main.cpp enviará '2' por BT y bajará la bandera
+    comboPlusMinusPressed = true;   
     Serial.println("[COMBO] +/- detectado: solicitando apagado de oxímetro.");
-    // Resetear timers de botones individuales para evitar acciones fantasma
     buttonPressedTimePlus  = 0;
     buttonPressedTimeMinus = 0;
-    return;   // salir del loop este ciclo; no procesar nada más
+    return;   
   }
 
-  // Evaluamos continuamente las pulsaciones dinámicas de los botones + y -
   bool pPlus  = handlePlusFluido();
   bool pMinus = handleMinusFluido();
 
@@ -181,7 +168,10 @@ void alarmManagerLoop(struct tm timeinfo) {
     case STATE_CONFIRM_PREVIOUS:
       if (pressedEnter()) {
         alarmEnabled = true;
+        tft.fillScreen(ILI9341_BLACK); 
         alarmState   = STATE_ACTIVE;
+        // CORRECCIÓN: Le pasamos el 5to parámetro. Como recién inicia, el oxímetro arranca activo (true)
+        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true);
       }
       else if (digitalRead(BTN_PLUS) == LOW) {
         tempHour   = alarmHour;
@@ -231,15 +221,15 @@ void alarmManagerLoop(struct tm timeinfo) {
         alarmEnabled = true;
         alarmFired   = false;
         saveAlarmToFlash();
+        tft.fillScreen(ILI9341_BLACK); 
         alarmState = STATE_ACTIVE;
-        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled);
+        // CORRECCIÓN: Al terminar la configuración manual, el oxímetro inicia encendido (true)
+        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true);
       }
       break;
 
     // ── Reloj activo ──────────────────────────────────────────────────────────
     case STATE_ACTIVE:
-      displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled);
-
       if (!(timeinfo.tm_hour == alarmHour && timeinfo.tm_min == alarmMinute)) {
         alarmFired = false;
       }

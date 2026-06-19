@@ -7,7 +7,7 @@
 #include "display_manager.h"
 
 BluetoothSerial SerialBT;
-const String SLAVE_NAME = "ESP32_Receptor_LED";
+const String SLAVE_NAME = "ESP32_Receptor";
 bool conectadoBT = false;
 bool btIniciado  = false;
 
@@ -19,25 +19,72 @@ bool alarmActive            = false;
 #define BT_RETRY_INTERVAL 15000   // Reintentar cada 15s si se cae
 
 void btConnect() {
-  Serial.println("[BT] Buscando receptor en el aire...");
-  conectadoBT = SerialBT.connect(SLAVE_NAME);
-  displaySetBTStatus(conectadoBT);
-  if (conectadoBT) {
-    Serial.println("[BT] ¡Conectado con éxito a la pulsera!");
+  Serial.println("[BT] Iniciando escaneo en el aire buscando por nombre...");
+  
+  // .discover(tiempo_en_ms) realiza el escaneo. 5000ms = 5 segundos.
+  // Devuelve un puntero a la lista de dispositivos encontrados.
+  BTScanResults* pResults = SerialBT.discover(5000);
+  
+  if (pResults) { 
+    int count = pResults->getCount();
+    Serial.printf("[BT] Escaneo terminado. Dispositivos encontrados: %d\n", count);
+    
+    for (int i = 0; i < count; i++) {
+      BTAdvertisedDevice* device = pResults->getDevice(i);
+      String devName = device->getName().c_str();
+      
+      Serial.printf(" -> Dispositivo encontrado: %s\n", devName.c_str());
+      
+      if (devName == SLAVE_NAME) {
+        Serial.println("[BT] ¡Receptor encontrado en el escaneo! Conectando...");
+        conectadoBT = SerialBT.connect(SLAVE_NAME);
+        displaySetBTStatus(conectadoBT);
+        if (conectadoBT) {
+          Serial.println("[BT] ¡Conectado con éxito por nombre!");
+          return;
+        }
+      }
+    }
+  } else {
+    Serial.println("[BT] El escaneo no arrojó resultados o falló el controlador.");
   }
-}
+  
+  Serial.println("[BT] No se pudo conectar con el receptor en este intento.");
+  conectadoBT = false;
+  displaySetBTStatus(false);
+} 
 
 void setup() {
   Serial.begin(115200);
   Serial.println("\n[Main] Iniciando Despertador Sordo...");
 
   displayInit();
+  
+  // 🧪 PRUEBA DE FUEGO: Iniciamos y conectamos BT antes del WiFi
+  SerialBT.begin("ESP32_Emisor", true);
+  Serial.println("[TEST] Buscando receptor con WiFi totalmente apagado...");
+  
+  // Intentamos conectar por nombre directo (esperamos hasta 10 segundos)
+  int intentos = 0;
+  while (!conectadoBT && intentos < 5) {
+    conectadoBT = SerialBT.connect(SLAVE_NAME);
+    if (!conectadoBT) {
+      Serial.println("[TEST] No lo vio, reintentando...");
+      delay(2000);
+      intentos++;
+    }
+  }
+  
+  if (conectadoBT) {
+    Serial.println("[TEST] ¡Conectado con éxito en frío!");
+  } else {
+    Serial.println("[TEST] Ni siquiera en frío lo encuentra.");
+  }
+
+  // Ahora recién iniciamos el resto
   wifiInit();
   webServerInit();
   alarmManagerInit();
-
-  // ⚠️ NO iniciamos el Bluetooth acá. Dejamos la radio 100% libre para el WiFi.
-  Serial.println("[Main] Setup completo. Portal Web listo y protegido.");
 }
 
 void loop() {
@@ -47,18 +94,21 @@ void loop() {
   unsigned long now = millis();
 
   // 2. Gestión inteligente del Bluetooth ─────────────────────────────────────
+// 2. Gestión inteligente del Bluetooth ─────────────────────────────────────
   if (wifiIsConnected()) {
     if (!btIniciado) {
       SerialBT.begin("ESP32_Emisor", true);
       btIniciado  = true;
-      lastBTRetry = now;
-      Serial.println("[BT] WiFi detectado. Radio Bluetooth encendida de fondo.");
+      // CRÍTICO: Le damos 5 segundos de ventaja a la radio antes del primer intento
+      lastBTRetry = now + 5000; 
+      Serial.println("[BT] Radio encendida. Esperando estabilización para buscar por nombre...");
     }
 
-    if (!conectadoBT && (now - lastBTRetry >= BT_RETRY_INTERVAL)) {
-      lastBTRetry = now;
+    // Corregimos la condición para que no intente conectar en el mismo milisegundo que encendió
+    if (!conectadoBT && (long)(now - lastBTRetry) >= 0) {
+      lastBTRetry = now + BT_RETRY_INTERVAL; // Próximo reintento en 15s
       btConnect();
-    }
+    } 
   } else {
     // Sin WiFi → apagar BT para liberar antena al portal web
     if (btIniciado) {
@@ -74,13 +124,17 @@ void loop() {
   struct tm timeinfo;
   bool timeOk = getLocalTime(&timeinfo, 0);
 
+  // ¡ESTO VA AFUERA! Los botones se tienen que leer SIEMPRE, haya hora o no.
+  alarmManagerLoop(timeinfo); 
+  
   if (timeOk) {
-    alarmManagerLoop(timeinfo);
+    // SÓLO dibujamos el reloj si la alarma ya está activa
+    if (alarmState == STATE_ACTIVE) {
+      displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, !comboPlusMinusPressed);
+    }
   }
 
   // 4. Combo +/− detectado por alarm_manager → apagar oxímetro del receptor ──
-  // alarm_manager.cpp pone comboPlusMinusPressed = true cuando detecta el combo
-  // en STATE_ACTIVE. Acá lo leemos, enviamos '2' por BT y bajamos la bandera.
   if (comboPlusMinusPressed) {
     if (conectadoBT) {
       SerialBT.write('2');
@@ -118,4 +172,4 @@ void loop() {
   }
 
   delay(1);
-} 
+}
