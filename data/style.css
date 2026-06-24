@@ -9,7 +9,7 @@ body {
   background: #0a0a10; /* Negro puro tecnológico */
   color: #ffffff; /* Blanco */
   min-height: 100vh;
-  padding: 32px 16px;
+  padding: 20px 12px; /* Margen externo reducido para pantallas chicas */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -17,13 +17,13 @@ body {
 
 .header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   width: 100%;
   max-width: 400px;
 }
 
 .header h1 {
-  font-size: 26px;
+  font-size: 22px; /* Tamaño adaptado para celular */
   font-weight: 700;
   color: #ffffff;
   letter-spacing: 0.5px;
@@ -41,8 +41,8 @@ body {
   max-width: 400px;
   background: #12121e; /* Negro azulado muy oscuro */
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: 14px;
+  margin-bottom: 16px;
   border: 1px solid rgba(82, 113, 255, 0.2);
 }
 
@@ -78,6 +78,7 @@ body {
   font-size: 13px;
   color: #a0aec0;
   margin-left: 22px;
+  word-break: break-all; /* Evita que SSIDs largos rompan el diseño en celular */
 }
 
 .status-ip {
@@ -97,23 +98,23 @@ form {
 .card {
   background: #12121e;
   border-radius: 14px;
-  padding: 20px;
+  padding: 16px; /* Más compacto en celulares */
   margin-bottom: 16px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .card-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: #5271ff;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 label {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   color: #a0aec0;
   margin-bottom: 6px;
   font-weight: 500;
@@ -126,11 +127,13 @@ input[type="password"] {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: #ffffff;
-  font-size: 15px;
-  padding: 12px 14px;
+  font-size: 16px; /* 🎛️ IMPORTANTE: 16px evita que iOS/Android hagan zoom automático al tipear */
+  padding: 12px;
   outline: none;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 input[type="text"]:focus,
@@ -142,20 +145,23 @@ input[type="password"]:focus {
 .show-pw {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 13px;
   color: #a0aec0;
-  margin-top: -6px;
+  margin-top: -4px;
+  padding: 8px 0; /* Área de toque más grande para el dedo */
   cursor: pointer;
   user-select: none;
 }
 
 .show-pw input[type="checkbox"] {
+  width: 16px;
+  height: 16px; /* Checkbox más grande para pantallas táctiles */
   accent-color: #5271ff;
   cursor: pointer;
 }
 
-/* ── Botón Azul Eléctrico ── */
+/* ── Botón Azul Eléctrico Táctil ── */
 .btn-save {
   width: 100%;
   background: #5271ff;
@@ -167,6 +173,7 @@ input[type="password"]:focus {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent; /* Quita el recuadro gris al tocar en móviles */
 }
 
 .btn-save:hover  { background: #3b59e9; }
@@ -177,10 +184,64 @@ input[type="password"]:focus {
   width: 100%;
   max-width: 400px;
   margin-top: 14px;
-  padding: 12px 14px;
+  padding: 12px;
   border-radius: 8px;
   font-size: 13px;
   text-align: center;
 }
 .flash-ok    { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
 .flash-error { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+/* ── LÓGICA DE ANIMACIÓN Y TRANSICIONES ── */
+
+/* Estado inicial: preparamos los elementos para que puedan cambiar suavemente */
+.card, form button {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: scale(1);
+  max-height: 500px; /* Un valor estimado para la altura máxima */
+  overflow: hidden;
+}
+
+.status-card {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(1);
+}
+
+/* Cuando la animación se activa (.loading-active aplicado al body) */
+
+/* 1. Achicar y desvanecer el formulario */
+.loading-active .card,
+.loading-active form button {
+  opacity: 0;
+  transform: scale(0.8);
+  max-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  pointer-events: none; /* Evita que el usuario toque mientras carga */
+}
+
+/* 2. Agrandar y destacar el recuadro de estado */
+.loading-active .status-card {
+  transform: scale(1.08);
+  border-color: #5271ff;
+  box-shadow: 0 10px 30px rgba(82, 113, 255, 0.15);
+  margin-top: 40px; /* Lo baja un poco para centrarlo visualmente */
+}
+
+/* ── 🖥️ Optimización para Computadora / Pantallas Grandes ── */
+@media (min-width: 480px) {
+  body {
+    padding: 40px 16px;
+  }
+  .header h1 {
+    font-size: 26px;
+  }
+  .status-card {
+    padding: 16px;
+  }
+  .card {
+    padding: 20px;
+  }
+}

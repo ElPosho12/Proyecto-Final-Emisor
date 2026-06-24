@@ -120,7 +120,7 @@ void displayConfirmPrevious(int hour, int minute) {
   tft.setTextSize(1);
   tft.setTextColor(COLOR_HINT);
   tft.setCursor(10, 115);
-  tft.println("[ENTER] Usar anterior   [ + / - ] Nueva alarma");
+  tft.println("[ENTER] Usar anterior   [ + / - ] Nueva alarma (HORA / MINUTOS)");
 
   // En el arranque frío del menú asumimos estados por defecto
   drawStatusIndicators(false, false, false);
@@ -171,22 +171,33 @@ void displaySetHour(int hour) {
 }
 
 // ─── Paso 2: Configurar MINUTOS (Refresco Parcial Dinámico) ────────────────────
-void displaySetMinute(int minute) {
+// ─── Paso 2: Configurar MINUTOS (Refresco Parcial Dinámico) ────────────────────
+// ─── Paso 2: Configurar MINUTOS (Refresco Parcial Dinámico) ────────────────────
+void displaySetMinute(int hour, int minute) {
+  // Forzamos el rediseño de la estructura si venimos del paso de la hora
+  // (Detectamos que cambiamos de fase porque reseteamos lastMinuteView)
+  if (lastMinuteView == -1) {
+    menuIniciado = false; 
+  }
+
   if (!menuIniciado) {
     tft.fillScreen(COLOR_BG);
     
     tft.fillRect(20, 42, 280, 80, COLOR_BOX);
     tft.drawRect(20, 42, 280, 80, COLOR_BOX_BORDER);
 
-    // Hora estática en gris oscuro mientras modificamos minutos
+    // 1. Dibujar la HORA ya confirmada en GRIS OSCURO
     tft.setTextSize(5);
     tft.setTextColor(COLOR_DARK_GRAY);
     tft.setCursor(75, 60);
-    tft.print("00:"); 
+    char bufH[4];
+    sprintf(bufH, "%02d:", hour);
+    tft.print(bufH); 
 
-    // Subrayado interactivo naranja de los minutos
+    // 2. Subrayado interactivo NARANJA para los minutos
     tft.fillRect(185, 105, 55, 4, COLOR_NARANJA);
 
+    // Guía de botones
     tft.setTextSize(1);
     tft.setTextColor(COLOR_HINT);
     tft.setCursor(10, 130);
@@ -196,7 +207,7 @@ void displaySetMinute(int minute) {
     menuIniciado = true;
   }
 
-  // Sobreecritura parcial de los dígitos de los minutos
+  // Sobreecritura parcial dinámica de los dígitos de los minutos en NARANJA
   if (minute != lastMinuteView) {
     tft.fillRect(185, 60, 55, 40, COLOR_BOX); 
     

@@ -170,7 +170,6 @@ void alarmManagerLoop(struct tm timeinfo) {
         alarmEnabled = true;
         tft.fillScreen(ILI9341_BLACK); 
         alarmState   = STATE_ACTIVE;
-        // CORRECCIÓN: Le pasamos el 5to parámetro. Como recién inicia, el oxímetro arranca activo (true)
         displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true, false, false);
       }
       else if (digitalRead(BTN_PLUS) == LOW) {
@@ -183,8 +182,12 @@ void alarmManagerLoop(struct tm timeinfo) {
       else if (digitalRead(BTN_MINUS) == LOW) {
         tempHour   = alarmHour;
         tempMinute = alarmMinute;
+        
+        // Se limpian los estados de pantalla para obligar el redibujado base de los minutos
+        displayResetMenuState(); 
+        
         alarmState = STATE_SET_MINUTE;
-        displaySetMinute(tempMinute);
+        displaySetMinute(tempHour, tempMinute);
         delay(250);
       }
       break;
@@ -201,8 +204,12 @@ void alarmManagerLoop(struct tm timeinfo) {
       }
       else if (pressedEnter()) {
         alarmHour  = tempHour;
+        
+        // Se limpian los estados de pantalla para obligar el redibujado base de los minutos
+        displayResetMenuState(); 
+        
         alarmState = STATE_SET_MINUTE;
-        displaySetMinute(tempMinute);
+        displaySetMinute(tempHour, tempMinute);
       }
       break;
 
@@ -210,11 +217,11 @@ void alarmManagerLoop(struct tm timeinfo) {
     case STATE_SET_MINUTE:
       if (pPlus) {
         tempMinute = (tempMinute + 5) % 60;
-        displaySetMinute(tempMinute);
+        displaySetMinute(tempHour, tempMinute);
       }
       else if (pMinus) {
         tempMinute = (tempMinute - 5 + 60) % 60;
-        displaySetMinute(tempMinute);
+        displaySetMinute(tempHour, tempMinute);
       }
       else if (pressedEnter()) {
         alarmMinute  = tempMinute;
@@ -223,7 +230,6 @@ void alarmManagerLoop(struct tm timeinfo) {
         saveAlarmToFlash();
         tft.fillScreen(ILI9341_BLACK); 
         alarmState = STATE_ACTIVE;
-        // CORRECCIÓN: Al terminar la configuración manual, el oxímetro inicia encendido (true)
         displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true, false, false);
       }
       break;
