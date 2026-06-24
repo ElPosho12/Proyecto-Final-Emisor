@@ -5,74 +5,138 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #0f0f1a;
-  color: #e8eaf0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0a0a10; /* Negro puro tecnológico */
+  color: #ffffff; /* Blanco */
   min-height: 100vh;
-  padding: 28px 16px;
+  padding: 32px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* ── Header ─────────────────────────────────────────── */
 .header {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 400px;
 }
 
 .header h1 {
-  font-size: 22px;
-  font-weight: 600;
-  color: #e8eaf0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
   margin-bottom: 4px;
 }
 
 .header p {
   font-size: 13px;
-  color: #6b7280;
+  color: #5271ff; /* Azul secundario */
 }
 
-/* ── Cards ──────────────────────────────────────────── */
+/* ── Recuadro de Estado (Priorizado arriba) ── */
+.status-card {
+  width: 100%;
+  max-width: 400px;
+  background: #12121e; /* Negro azulado muy oscuro */
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(82, 113, 255, 0.2);
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Colores de estados dinámicos */
+.status-dot.dot-ok    { background: #22c55e; box-shadow: 0 0 10px #22c55e; } /* Verde */
+.status-dot.dot-warn  { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; } /* Amarillo */
+.status-dot.dot-error { background: #ef4444; box-shadow: 0 0 10px #ef4444; } /* Rojo */
+
+.status-label {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+}
+
+.status-text {
+  font-size: 13px;
+  color: #a0aec0;
+  margin-left: 22px;
+}
+
+.status-ip {
+  font-size: 12px;
+  color: #5271ff;
+  margin-left: 22px;
+  margin-top: 4px;
+  font-family: monospace;
+}
+
+/* ── Formulario y Configuración ── */
+form {
+  width: 100%;
+  max-width: 400px;
+}
+
 .card {
-  background: #1e2a3a;
+  background: #12121e;
   border-radius: 14px;
-  padding: 18px;
+  padding: 20px;
   margin-bottom: 16px;
-  border: 1px solid rgba(91, 141, 238, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .card-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: #5b8dee;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5271ff;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
-/* ── Form elements ──────────────────────────────────── */
 label {
   display: block;
   font-size: 13px;
-  color: #9ca3af;
+  color: #a0aec0;
   margin-bottom: 6px;
+  font-weight: 500;
 }
 
 input[type="text"],
 input[type="password"] {
   width: 100%;
-  background: #0f0f1a;
+  background: #0a0a10;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 9px;
-  color: #e8eaf0;
+  border-radius: 8px;
+  color: #ffffff;
   font-size: 15px;
-  padding: 11px 14px;
+  padding: 12px 14px;
   outline: none;
-  margin-bottom: 14px;
-  transition: border-color 0.2s;
+  margin-bottom: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 input[type="text"]:focus,
 input[type="password"]:focus {
-  border-color: #5b8dee;
+  border-color: #5271ff;
+  box-shadow: 0 0 0 2px rgba(82, 113, 255, 0.2);
 }
 
 .show-pw {
@@ -80,25 +144,22 @@ input[type="password"]:focus {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #9ca3af;
-  margin-top: -8px;
-  margin-bottom: 4px;
+  color: #a0aec0;
+  margin-top: -6px;
   cursor: pointer;
   user-select: none;
 }
 
 .show-pw input[type="checkbox"] {
-  width: auto;
-  margin: 0;
-  accent-color: #5b8dee;
+  accent-color: #5271ff;
   cursor: pointer;
 }
 
-/* ── Botón guardar ──────────────────────────────────── */
+/* ── Botón Azul Eléctrico ── */
 .btn-save {
   width: 100%;
-  background: #3b5bdb;
-  color: white;
+  background: #5271ff;
+  color: #ffffff;
   border: none;
   border-radius: 10px;
   padding: 14px;
@@ -108,65 +169,18 @@ input[type="password"]:focus {
   transition: background 0.2s, transform 0.1s;
 }
 
-.btn-save:hover  { background: #2f4ac4; }
+.btn-save:hover  { background: #3b59e9; }
 .btn-save:active { transform: scale(0.98); }
 
-/* ── Estado del ESP32 ───────────────────────────────── */
-.status-card {
-  margin-top: 18px;
-  background: #162032;
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.status-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.status-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-dot.dot-ok    { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
-.status-dot.dot-warn  { background: #f59e0b; box-shadow: 0 0 6px #f59e0b88; }
-.status-dot.dot-error { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
-
-.status-label {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #9ca3af;
-}
-
-.status-text {
-  font-size: 13px;
-  color: #cbd5e1;
-  margin-left: 17px;
-}
-
-.status-ip {
-  font-size: 12px;
-  color: #5b8dee;
-  margin-left: 17px;
-  margin-top: 3px;
-  font-family: monospace;
-}
-
-/* ── Mensajes flash ─────────────────────────────────── */
+/* ── Mensajes Flash ── */
 .flash {
+  width: 100%;
+  max-width: 400px;
   margin-top: 14px;
   padding: 12px 14px;
-  border-radius: 9px;
+  border-radius: 8px;
   font-size: 13px;
+  text-align: center;
 }
-
-.flash-ok    { background: #14532d; color: #86efac; border: 1px solid #22c55e44; }
-.flash-error { background: #4c0519; color: #fca5a5; border: 1px solid #ef444444; }
+.flash-ok    { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+.flash-error { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }

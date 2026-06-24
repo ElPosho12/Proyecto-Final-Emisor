@@ -3,19 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Despertador Sordo</title>
+  <title>Despertador Sordo - WiFi</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
   <div class="header">
-    <h1>&#9201; Despertador Sordo</h1>
-    <p>Configuracion WiFi del Emisor</p>
+    <h1>Despertador Sordo</h1>
+    <p>Configuración WiFi del Emisor</p>
+  </div>
+
+  <div class="status-card">
+    <div class="status-header">
+      <span class="status-dot dot-error" id="status-dot"></span>
+      <span class="status-label" id="status-label">Desconectado</span>
+    </div>
+    <div class="status-text" id="status-text">Cargando estado...</div>
+    <div class="status-ip" id="status-ip"></div>
   </div>
 
   <form action="/save" method="POST">
     <div class="card">
-      <div class="card-title">&#128246; Red WiFi</div>
+      <div class="card-title">Red WiFi</div>
 
       <label for="ssid">Nombre de red (SSID)</label>
       <input type="text" id="ssid" name="ssid"
@@ -24,30 +33,21 @@
              autocomplete="off"
              required>
 
-      <label for="password">Contrasena</label>
+      <label for="password">Contraseña</label>
       <input type="password" id="password" name="password"
-             placeholder="Contrasena del WiFi"
+             placeholder="Contraseña del WiFi"
              autocomplete="off">
 
       <label class="show-pw">
         <input type="checkbox" onclick="togglePassword()">
-        Mostrar contrasena
+        Mostrar contraseña
       </label>
     </div>
 
-    <button type="submit" class="btn-save">&#128190; Guardar y Conectar</button>
+    <button type="submit" class="btn-save">Guardar y Conectar</button>
   </form>
 
   %FLASH%
-
-  <div class="status-card">
-    <div class="status-header">
-      <span class="status-dot %DOT_CLASS%" id="status-dot"></span>
-      <span class="status-label" id="status-label">%STATUS_LABEL%</span>
-    </div>
-    <div class="status-text" id="status-text">%STATUS_TEXT%</div>
-    <div class="status-ip"   id="status-ip">%STATUS_IP%</div>
-  </div>
 
   <script src="/app.js"></script>
 </body>
