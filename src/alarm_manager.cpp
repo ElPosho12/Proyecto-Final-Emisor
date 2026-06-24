@@ -171,7 +171,7 @@ void alarmManagerLoop(struct tm timeinfo) {
         tft.fillScreen(ILI9341_BLACK); 
         alarmState   = STATE_ACTIVE;
         // CORRECCIÓN: Le pasamos el 5to parámetro. Como recién inicia, el oxímetro arranca activo (true)
-        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true);
+        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true, false, false);
       }
       else if (digitalRead(BTN_PLUS) == LOW) {
         tempHour   = alarmHour;
@@ -209,11 +209,11 @@ void alarmManagerLoop(struct tm timeinfo) {
     // ── Configurar minutos ────────────────────────────────────────────────────
     case STATE_SET_MINUTE:
       if (pPlus) {
-        tempMinute = (tempMinute + 1) % 60;
+        tempMinute = (tempMinute + 5) % 60;
         displaySetMinute(tempMinute);
       }
       else if (pMinus) {
-        tempMinute = (tempMinute - 1 + 60) % 60;
+        tempMinute = (tempMinute - 5 + 60) % 60;
         displaySetMinute(tempMinute);
       }
       else if (pressedEnter()) {
@@ -224,7 +224,7 @@ void alarmManagerLoop(struct tm timeinfo) {
         tft.fillScreen(ILI9341_BLACK); 
         alarmState = STATE_ACTIVE;
         // CORRECCIÓN: Al terminar la configuración manual, el oxímetro inicia encendido (true)
-        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true);
+        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true, false, false);
       }
       break;
 
