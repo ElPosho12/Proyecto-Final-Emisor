@@ -1,12 +1,17 @@
 #include "alarm_manager.h"
 #include "display_manager.h"
 #include <Preferences.h>
+#include "wifi_manager.h"
 #include <Adafruit_ILI9341.h> 
 
 // Traemos el objeto original tft
 extern Adafruit_ILI9341 tft; 
 
 // ─── Variables globales ───────────────────────────────────────────────────────
+extern bool oximetroHabilitadoEmisor;
+extern bool conectadoBT;
+extern bool oximetroHabilitadoEmisor;
+
 AlarmState alarmState   = STATE_CONFIRM_PREVIOUS;
 int  alarmHour          = 7;
 int  alarmMinute        = 0;
@@ -213,7 +218,7 @@ void alarmManagerLoop(struct tm timeinfo) {
       }
       break;
 
-    // ── Configurar minutos ────────────────────────────────────────────────────
+// ── Configurar minutos ────────────────────────────────────────────────────
     case STATE_SET_MINUTE:
       if (pPlus) {
         tempMinute = (tempMinute + 5) % 60;
@@ -230,7 +235,9 @@ void alarmManagerLoop(struct tm timeinfo) {
         saveAlarmToFlash();
         tft.fillScreen(ILI9341_BLACK); 
         alarmState = STATE_ACTIVE;
-        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true, false, false);
+        
+        // 🚀 LLAMADA CORREGIDA: Usando las variables y funciones externas enlazadas
+        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
       }
       break;
 

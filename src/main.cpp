@@ -16,6 +16,9 @@ unsigned long lastBTRetry    = 0;
 unsigned long alarmStartTime = 0;
 bool alarmActive             = false;
 
+// Estado local para saber si el usuario apagó el oxímetro remoto
+bool oximetroHabilitadoEmisor = true;
+
 #define BT_RETRY_INTERVAL 15000   // Reintentar cada 15s si se cae
 
 void btConnect() {
@@ -36,7 +39,6 @@ void btConnect() {
       if (devName == SLAVE_NAME) {
         Serial.println("[BT] ¡Receptor encontrado en el escaneo! Conectando...");
         conectadoBT = SerialBT.connect(SLAVE_NAME);
-        // ✨ Se borró la llamada vieja de displaySetBTStatus de acá
         if (conectadoBT) {
           Serial.println("[BT] ¡Conectado con éxito por nombre!");
           return;
@@ -49,7 +51,6 @@ void btConnect() {
   
   Serial.println("[BT] No se pudo conectar con el receptor en este intento.");
   conectadoBT = false;
-  // ✨ Se borró la llamada vieja de displaySetBTStatus de acá
 } 
 
 void setup() {
@@ -57,7 +58,6 @@ void setup() {
   Serial.println("\n[Main] Iniciando Despertador Sordo...");
 
   displayInit();
-  
   wifiInit();
   webServerInit();
   alarmManagerInit();
@@ -85,17 +85,16 @@ void loop() {
       btConnect();
     } 
   } else {
-    // Sin WiFi → apagar BT para liberar antena al portal web
     if (btIniciado) {
       SerialBT.end();
       btIniciado  = false;
       conectadoBT = false;
-      // ✨ Se borró la llamada vieja de displaySetBTStatus de acá
       Serial.println("[BT] Sin WiFi de confianza. Bluetooth apagado para priorizar el Portal Web.");
     }
   }
 
   // 3. Obtener hora actual sin bloquear (solo si hay WiFi/NTP)
+// 3. Obtener hora actual sin bloquear (solo si hay WiFi/NTP)
   struct tm timeinfo;
   bool timeOk = getLocalTime(&timeinfo, 0);
 
@@ -103,8 +102,8 @@ void loop() {
   
   if (timeOk) {
     if (alarmState == STATE_ACTIVE) {
-      // 🚀 LLAMADA ACTUALIZADA: Ahora le pasamos los estados de WiFi y BT directos al Reloj
-      displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, !comboPlusMinusPressed, wifiIsConnected(), conectadoBT);
+      // 🚀 CORREGIDO: Reemplazamos el !comboPlusMinusPressed por nuestra variable de estado persistente
+      displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
     }
   }
 
@@ -112,7 +111,11 @@ void loop() {
   if (comboPlusMinusPressed) {
     if (conectadoBT) {
       SerialBT.write('2');
+      oximetroHabilitadoEmisor = false; // 👈 Guarda el estado apagado de forma permanente
       Serial.println("[BT] Enviado '2' → oxímetro desactivado en receptor.");
+      
+      // Forzar el refresco de pantalla inmediato rompiendo el filtro de minutos
+      lastMinute = -1; 
     } else {
       Serial.println("[BT] Combo +/- detectado pero receptor no conectado. '2' no enviado.");
     }
@@ -137,12 +140,25 @@ void loop() {
   }
 
   // 6. Apagar alarma automáticamente tras 1 minuto ────────────────────────────
+  // 6. Apagar alarma automáticamente tras 1 minuto y regresar al menú inicial ───
   if (alarmActive && (now - alarmStartTime >= 60000)) {
     alarmActive = false;
     Serial.println("[Alarm] Fin del tiempo de alarma. Apagando...");
+    
     if (conectadoBT) {
       SerialBT.write('0');
     }
+
+    // 🚀 NUEVO: Forzar el regreso al estado de confirmación de alarma anterior
+    alarmState = STATE_CONFIRM_PREVIOUS;
+    
+    // Limpiamos los estados de las vistas del menú para que permita redibujar desde cero
+    displayResetMenuState();
+    
+    // Llamamos a la función gráfica que dibuja la pantalla de consulta de alarma vieja
+    displayConfirmPrevious(alarmHour, alarmMinute);
+    
+    Serial.println("[Alarm] Regresando automáticamente al menú: ¿Usar alarma anterior?");
   }
 
   delay(1);
