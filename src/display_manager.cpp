@@ -213,6 +213,6 @@ void displayAlarmFired() {
   tft.fillScreen(COLOR_FAIL);
   tft.setTextSize(4);
   tft.setTextColor(COLOR_TITLE);
-  tft.setCursor(45, 90);
+  tft.setCursor(43, 90);
   tft.print("¡DESPIERTA!");
 }

@@ -8,6 +8,12 @@
 extern Adafruit_ILI9341 tft; 
 
 // ─── Variables globales ───────────────────────────────────────────────────────
+#define LED_ROJO   32
+#define LED_VERDE  26
+#define LED_AZUL   33
+
+extern bool conectadoBT;
+extern bool oximetroHabilitadoEmisor;
 extern bool oximetroHabilitadoEmisor;
 extern bool conectadoBT;
 extern bool oximetroHabilitadoEmisor;
@@ -39,6 +45,8 @@ static unsigned long lastPressEnter         = 0;
 
 static unsigned long comboStartTime  = 0;   
 static bool          comboFired      = false; 
+
+void encenderLedMomentaneo(uint8_t pin, unsigned long duracionMs);
 
 static bool detectCombo() {
   bool plusLow  = (digitalRead(BTN_PLUS)  == LOW);
@@ -171,29 +179,23 @@ void alarmManagerLoop(struct tm timeinfo) {
 
     // ── Pantalla de Confirmación de Alarma Anterior ───────────────────────────
     case STATE_CONFIRM_PREVIOUS:
-      if (pressedEnter()) {
-        alarmEnabled = true;
-        tft.fillScreen(ILI9341_BLACK); 
-        alarmState   = STATE_ACTIVE;
-        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, true, false, false);
-      }
-      else if (digitalRead(BTN_PLUS) == LOW) {
+      if (pPlus || pMinus) {
         tempHour   = alarmHour;
         tempMinute = alarmMinute;
         alarmState = STATE_SET_HOUR;
+        displayResetMenuState();
         displaySetHour(tempHour);
-        delay(250);
       }
-      else if (digitalRead(BTN_MINUS) == LOW) {
-        tempHour   = alarmHour;
-        tempMinute = alarmMinute;
-        
-        // Se limpian los estados de pantalla para obligar el redibujado base de los minutos
-        displayResetMenuState(); 
-        
-        alarmState = STATE_SET_MINUTE;
-        displaySetMinute(tempHour, tempMinute);
-        delay(250);
+      else if (pressedEnter()) {
+        alarmEnabled = true;
+        alarmFired   = false;
+        tft.fillScreen(ILI9341_BLACK);
+        alarmState = STATE_ACTIVE;
+
+        // 🚀 NUEVO: Prende en verde al confirmar alarma vieja
+        encenderLedMomentaneo(LED_VERDE, 2000); 
+
+        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
       }
       break;
 
@@ -235,12 +237,13 @@ void alarmManagerLoop(struct tm timeinfo) {
         saveAlarmToFlash();
         tft.fillScreen(ILI9341_BLACK); 
         alarmState = STATE_ACTIVE;
-        
-        // 🚀 LLAMADA CORREGIDA: Usando las variables y funciones externas enlazadas
+
+        // 🚀 NUEVO: Prende en verde al terminar de configurar hora y minutos
+        encenderLedMomentaneo(LED_VERDE, 2000); 
+
         displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
       }
       break;
-
     // ── Reloj activo ──────────────────────────────────────────────────────────
     case STATE_ACTIVE:
       if (!(timeinfo.tm_hour == alarmHour && timeinfo.tm_min == alarmMinute)) {
