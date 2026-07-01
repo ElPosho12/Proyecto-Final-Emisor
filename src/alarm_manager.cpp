@@ -31,7 +31,7 @@ static int  tempHour    = 7;
 static int  tempMinute  = 0;
 static bool hasPrevious = false;   // si hay alarma guardada en flash
 
-// ─── Variables para Aceleración y Fluidez de Pulsado (No Bloqueante) ─────────
+// ─── Variables para Aceleración y Fluidez de Pulsado ─────────
 static unsigned long buttonPressedTimePlus  = 0;
 static unsigned long buttonPressedTimeMinus = 0;
 static unsigned long lastActionTime         = 0;
@@ -67,7 +67,7 @@ static bool detectCombo() {
   return false;
 }
 
-// ─── Control Fluido de Botón Más (+) ─────────────────────────────────────────
+// ─── Control Fluido de Botón "+" ─────────────────────────────────────────
 static bool handlePlusFluido() {
   if (digitalRead(BTN_MINUS) == LOW) return false;
 
@@ -89,7 +89,7 @@ static bool handlePlusFluido() {
   return false;
 }
 
-// ─── Control Fluido de Botón Menos (-) ───────────────────────────────────────
+// ─── Control Fluido de Botón "-" ───────────────────────────────────────
 static bool handleMinusFluido() {
   if (digitalRead(BTN_PLUS) == LOW) return false;
 
@@ -121,7 +121,7 @@ static bool pressedEnter() {
   return false;
 }
 
-// ─── Guardar y Cargar desde Memoria Flash (NVS) ──────────────────────────────
+// ─── Guardar y Cargar desde Memoria Flash  ──────────────────────────────
 static void saveAlarmToFlash() {
   Preferences prefs;
   prefs.begin("alarm", false);
@@ -244,7 +244,7 @@ void alarmManagerLoop(struct tm timeinfo) {
         displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
       }
       break;
-    // ── Reloj activo ──────────────────────────────────────────────────────────
+    //Reloj activo -----------------------------------------------
     case STATE_ACTIVE:
       if (!(timeinfo.tm_hour == alarmHour && timeinfo.tm_min == alarmMinute)) {
         alarmFired = false;

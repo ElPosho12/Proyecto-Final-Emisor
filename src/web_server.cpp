@@ -6,13 +6,13 @@
 
 WebServer server(80);
 
-// ─── Prototipos de funciones (Esto soluciona el error del Linker) ────────────
+// ─── Prototipos de funciones ────────────
 static void handleRoot();
 static void handleSave();
 static void handleStatus();
 static void serveFile(const char* path, const char* contentType);
 
-// ─── Utilidad: leer archivo de SPIFFS como String ────────────────────────────
+// ─── leer archivo de SPIFFS como String ────────────────────────────
 static String readFile(const char* path) {
   File f = SPIFFS.open(path, "r");
   if (!f) {
@@ -24,7 +24,7 @@ static String readFile(const char* path) {
   return content;
 }
 
-// ─── Utilidad: servir archivo de SPIFFS con content-type correcto ─────────────
+// ───servir archivo de SPIFFS con content-type correcto ─────────────
 static void serveFile(const char* path, const char* contentType) {
   File f = SPIFFS.open(path, "r");
   if (!f) {
@@ -37,8 +37,7 @@ static void serveFile(const char* path, const char* contentType) {
   f.close();
 }
 
-// ─── GET / → sirve index.html con placeholders reemplazados ────────────────
-// ─── GET / → sirve index.html de forma segura y directa ────────────────
+// ─── GET / → sirve index.html --------------------------
 static void handleRoot() {
   File file = SPIFFS.open("/index.html", "r");
   if (!file) {
@@ -47,11 +46,11 @@ static void handleRoot() {
     return;
   }
 
-  // Leemos todo el HTML de una sola vez de forma eficiente
+  // Leem todo el HTML de una sola vez
   String html = file.readString();
   file.close();
 
-  // Preparamos los valores según el estado del WiFi
+  // Prepara los valores según el estado del WiFi
   String dot, label, text, ip;
   if (wifiIsConnected()) {
     dot   = "dot-ok";
@@ -70,7 +69,7 @@ static void handleRoot() {
     ip    = "";
   }
 
-  // Hacemos todos los reemplazos de manera segura sobre el string completo
+  // Hace todos los reemplazos de manera segura sobre el string completo
   html.replace("%SSID%",         savedSSID);
   html.replace("%DOT_CLASS%",    dot);
   html.replace("%STATUS_LABEL%", label);
@@ -78,12 +77,12 @@ static void handleRoot() {
   html.replace("%STATUS_IP%",    ip);
   html.replace("%FLASH%",        "");
 
-  // Enviamos todo el bloque limpio al navegador
+  // Envia todo el bloque limpio al navegador
   server.send(200, "text/html", html);
   Serial.println("[Web] index.html procesado y servido correctamente.");
 }
 
-// ─── POST /save → guarda credenciales y reconecta ──────────────────────────
+// guarda credenciales y reconecta ──────────────────────────
 static void handleSave() {
   if (!server.hasArg("ssid") || server.arg("ssid") == "") {
     server.send(400, "text/plain", "Falta el nombre de red.");
@@ -99,7 +98,6 @@ static void handleSave() {
   prefs.putString("password", savedPassword);
   prefs.end();
 
-  // Respondemos un JSON de éxito para que la web mantenga la animación en vivo
   server.send(200, "application/json", "{\"status\":\"ok\"}");
   
   unsigned char i = 0;
@@ -112,7 +110,7 @@ static void handleSave() {
   wifiConnect();
 }
 
-// ─── GET /status → JSON con el estado actual ───────────────────────────────
+//animacion con el estado actual ───────────────────────────────
 static void handleStatus() {
   bool connected = wifiIsConnected();
   String json = "{";
@@ -124,7 +122,7 @@ static void handleStatus() {
   server.send(200, "application/json", json);
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// ─── Inicia servidor ─────────────────────────────────────────────────────────────────────
 void webServerInit() {
   if (!SPIFFS.begin(true)) {
     Serial.println("[Web] Error: no se pudo montar SPIFFS.");

@@ -20,7 +20,7 @@ unsigned long tApagarLedMomentaneo = 0;
 // ─── Temporización No Bloqueante ──────────────────────────────────────────────
 unsigned long lastBTRetry    = 0;
 unsigned long alarmStartTime = 0;
-bool alarmActive             = false;
+bool alarmActive = false;
 
 // Variables para el control de los destellos momentáneos del LED
 unsigned long tApagadoLedMomentaneo = 0;
@@ -29,11 +29,11 @@ bool ledMomentaneoActivo = false;
 // Estado local para saber si el usuario apagó el oxímetro remoto
 bool oximetroHabilitadoEmisor = true;
 
-// Estados anteriores para detectar el "momento exacto" de la conexión
+// Estados anteriores para detectar el momento exacto de la conexión
 bool lastWifiState = false;
 bool lastBTState   = false;
 
-#define BT_RETRY_INTERVAL 15000   // Reintentar cada 15s si se cae
+#define BT_RETRY_INTERVAL 10000   // Reintentar cada 10s si se cae
 
 // Función auxiliar para encender un color y programar su apagado
 void encenderLedMomentaneo(uint8_t pin, unsigned long duracionMs) {
@@ -86,7 +86,7 @@ void loop() {
   webServerLoop();
   unsigned long now = millis();
 
-  // 2. Gestión del Bluetooth ─────────────────────────────────────────────────
+  // 2. Gestión del Bluetooth
   if (wifiIsConnected()) {
     if (!btIniciado) {
       SerialBT.begin("ESP32_Emisor", true);
@@ -105,12 +105,12 @@ void loop() {
     }
   }
 
-  // 🚀 CONDICIÓN 1: Prender Azul momentáneamente al conectar Receptor AND Wifi
+  // Prender led azul momentáneamente al conectar Receptor y Wifi
   bool currentWifi = wifiIsConnected();
   bool currentBT   = conectadoBT;
   
   if ((currentWifi && currentBT) && (!lastWifiState || !lastBTState)) {
-    encenderLedMomentaneo(LED_AZUL, 1500); // Se enciende 1.5 segundos en Azul
+    encenderLedMomentaneo(LED_AZUL, 1500); // Se enciende 1,5 segundos en Azul
     Serial.println("[LED] Ambos conectados → Destello Azul.");
   }
   lastWifiState = currentWifi;
@@ -133,13 +133,13 @@ void loop() {
     displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, currentWifi, currentBT);
   }
 
-  // 4. Combo +/− detectado → apagar oxímetro y prender ROJO momentáneamente ────
+  // 4. Combo +/− detectado → apagar oxímetro y prender rojo momentáneamente
   if (comboPlusMinusPressed) {
     if (conectadoBT) {
       SerialBT.write('2');
       oximetroHabilitadoEmisor = false; 
       
-      // 🚀 CONDICIÓN 2: Destello Rojo momentáneo al desactivar MAX30102
+      //Destello Rojo momentáneo al desactivar MAX30102
       encenderLedMomentaneo(LED_ROJO, 1500);
       
       if (timeOk) {
@@ -150,7 +150,7 @@ void loop() {
     comboPlusMinusPressed = false;   
   }
 
-  // 5. Disparar alarma (no bloqueante) y parpadeo de LED ──────────────────────
+  // 5. Disparar alarma y parpadeo de LED 
   if (timeOk && alarmEnabled && !alarmFired) {
     if (timeinfo.tm_hour == alarmHour && timeinfo.tm_min == alarmMinute) {
       alarmFired      = true;
@@ -163,7 +163,7 @@ void loop() {
     }
   }
 
-  // 🚀 CONDICIÓN 4: Cuando suene la alarma, parpadea en Rojo sin trabar el loop
+  //Cuando suene la alarma, parpadea en rojo sin trabar el loop
   if (alarmActive) {
     // Alterna el LED Rojo cada 250 milisegundos
     if ((now / 250) % 2 == 0) {
@@ -175,10 +175,10 @@ void loop() {
     }
   }
 
-  // 6. Apagar alarma automáticamente tras 1 minuto y regresar al menú inicial ───
+  // 6. Apagar alarma automáticamente tras 1 minuto y regresar al menú inicial
   if (alarmActive && (now - alarmStartTime >= 60000)) {
     alarmActive = false;
-    digitalWrite(LED_ROJO, LOW); // Nos aseguramos de apagar el parpadeo
+    digitalWrite(LED_ROJO, LOW);
     
     if (conectadoBT) {
       SerialBT.write('0');
