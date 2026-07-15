@@ -1,28 +1,22 @@
 #include "display_manager.h"
-#include "SPI.h"
-#include "Adafruit_GFX.h"
-#include "Adafruit_ILI9341.h"
+#include <TFT_eSPI.h>
 
-// ─── Pines TFT ────────────────────────────────────────────────────────────────
-#define TFT_MOSI  4
-#define TFT_CLK   5
-#define TFT_CS    19
-#define TFT_DC    15
-#define TFT_RST   -1   
-
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST);
+// ─── Objeto de pantalla TFT_eSPI ───────────────────────────────────────────────
+// Los pines (MOSI, CLK, CS, DC, RST) NO se pasan acá: se configuran en
+// platformio.ini (build_flags) o en User_Setup.h de la librería TFT_eSPI.
+TFT_eSPI tft = TFT_eSPI();
 
 // ─── Paleta de Colores de la Interfaz ─────────────────────────────────────────
-#define COLOR_BG         ILI9341_BLACK
-#define COLOR_TITLE      ILI9341_WHITE
+#define COLOR_BG         TFT_BLACK
+#define COLOR_TITLE      TFT_WHITE
 #define COLOR_HINT       0x7BEF   
 #define COLOR_DARK_GRAY  0x3186   
 #define COLOR_BOX        0x1082   
 #define COLOR_BOX_BORDER 0x4208   
 #define COLOR_CELESTE    0x05FF   
 #define COLOR_NARANJA    0xFC60   
-#define COLOR_OK         ILI9341_GREEN
-#define COLOR_FAIL       ILI9341_RED
+#define COLOR_OK         TFT_GREEN
+#define COLOR_FAIL       TFT_RED
 
 // ─── Variables de Estado de Vistas ────────────────────────────────────────────
 int lastMinute       = -1;
@@ -37,11 +31,11 @@ static void drawStatusIndicators(bool wifiConectado, bool btConectado, bool oxim
   tft.setCursor(40, 140);
   if (wifiConectado) {
     tft.fillCircle(25, 143, radius, COLOR_OK);
-    tft.setTextColor(COLOR_OK);
+    tft.setTextColor(COLOR_OK, COLOR_BG);
     tft.println("WIFI CONECTADO");
   } else {
     tft.fillCircle(25, 143, radius, COLOR_FAIL);
-    tft.setTextColor(COLOR_FAIL);
+    tft.setTextColor(COLOR_FAIL, COLOR_BG);
     tft.println("WIFI DESCONECT.");
   }
 
@@ -49,11 +43,11 @@ static void drawStatusIndicators(bool wifiConectado, bool btConectado, bool oxim
   tft.setCursor(40, 160);
   if (btConectado) {
     tft.fillCircle(25, 163, radius, COLOR_OK);
-    tft.setTextColor(COLOR_OK);
+    tft.setTextColor(COLOR_OK, COLOR_BG);
     tft.println("RECEPTOR OK");
   } else {
     tft.fillCircle(25, 163, radius, COLOR_FAIL);
-    tft.setTextColor(COLOR_FAIL);
+    tft.setTextColor(COLOR_FAIL, COLOR_BG);
     tft.println("RECEPTOR OFF");
   }
 
@@ -61,18 +55,17 @@ static void drawStatusIndicators(bool wifiConectado, bool btConectado, bool oxim
   tft.setCursor(40, 180);
   if (oximetroActivo) {
     tft.fillCircle(25, 183, radius, COLOR_OK);
-    tft.setTextColor(COLOR_OK);
+    tft.setTextColor(COLOR_OK, COLOR_BG);
     tft.println("MAX30102 ACTIVO");
   } else {
-    // 🚀 MODIFICADO: Ahora cambia a rojo y muestra tu texto personalizado en el emisor
     tft.fillCircle(25, 183, radius, COLOR_FAIL);
-    tft.setTextColor(COLOR_FAIL);
+    tft.setTextColor(COLOR_FAIL, COLOR_BG);
     tft.println("MAX30102 DESACTIVADO");
   }
 }
 
 void displayInit() {
-  tft.begin();
+  tft.init();
   tft.setRotation(3); // Horizontal panorámico
   tft.fillScreen(COLOR_BG);
 }
@@ -86,7 +79,7 @@ void displayConfirmPrevious(int hour, int minute) {
   tft.fillScreen(COLOR_BG);
   
   tft.setTextSize(2);
-  tft.setTextColor(COLOR_TITLE);
+  tft.setTextColor(COLOR_TITLE, COLOR_BG);
   tft.setCursor(20, 30);
   tft.println("¿Usar alarma anterior?");
 
@@ -94,14 +87,14 @@ void displayConfirmPrevious(int hour, int minute) {
   tft.drawRect(40, 70, 240, 60, COLOR_BOX_BORDER);
 
   tft.setTextSize(4);
-  tft.setTextColor(COLOR_CELESTE);
+  tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
   tft.setCursor(100, 83);
   char buf[6];
   sprintf(buf, "%02d:%02d", hour, minute);
   tft.print(buf);
 
   tft.setTextSize(1);
-  tft.setTextColor(COLOR_HINT);
+  tft.setTextColor(COLOR_HINT, COLOR_BG);
   tft.setCursor(40, 150);
   tft.println("[ENTER] Confirmar vieja  /  [+] o [-] Crear nueva");
 }
@@ -112,7 +105,7 @@ void displaySetHour(int hour) {
   if (lastHourView == -1) {
     tft.fillScreen(COLOR_BG);
     tft.setTextSize(2);
-    tft.setTextColor(COLOR_TITLE);
+    tft.setTextColor(COLOR_TITLE, COLOR_BG);
     tft.setCursor(20, 25);
     tft.println("Configurar Hora:");
 
@@ -121,17 +114,17 @@ void displaySetHour(int hour) {
     tft.fillRect(165, 60, 55, 40, COLOR_BOX);
 
     tft.setTextSize(4);
-    tft.setTextColor(COLOR_DARK_GRAY);
+    tft.setTextColor(COLOR_DARK_GRAY, COLOR_BOX);
     tft.setCursor(165, 60);
     tft.print("--");
-    tft.setTextColor(COLOR_TITLE);
+    tft.setTextColor(COLOR_TITLE, COLOR_BG);
     tft.setCursor(145, 60);
     tft.print(":");
   }
 
   tft.fillRect(80, 60, 55, 40, COLOR_BOX);
   tft.setTextSize(5);
-  tft.setTextColor(COLOR_CELESTE);
+  tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
   tft.setCursor(80, 60);
   char bufH[3];
   sprintf(bufH, "%02d", hour);
@@ -146,27 +139,27 @@ void displaySetMinute(int hour, int minute) {
   if (lastMinuteView == -1) {
     tft.fillRect(20, 25, 250, 25, COLOR_BG);
     tft.setTextSize(2);
-    tft.setTextColor(COLOR_TITLE);
+    tft.setTextColor(COLOR_TITLE, COLOR_BG);
     tft.setCursor(20, 25);
     tft.println("Configurar Minutos:");
 
     tft.fillRect(80, 60, 55, 40, COLOR_BOX);
     tft.setTextSize(5);
-    tft.setTextColor(COLOR_DARK_GRAY);
+    tft.setTextColor(COLOR_DARK_GRAY, COLOR_BOX);
     tft.setCursor(80, 60);
     char bufH[3];
     sprintf(bufH, "%02d", hour);
     tft.print(bufH);
 
     tft.setTextSize(4);
-    tft.setTextColor(COLOR_TITLE);
+    tft.setTextColor(COLOR_TITLE, COLOR_BG);
     tft.setCursor(145, 60);
     tft.print(":");
   }
 
   tft.fillRect(185, 60, 55, 40, COLOR_BOX); 
   tft.setTextSize(5);
-  tft.setTextColor(COLOR_NARANJA);
+  tft.setTextColor(COLOR_NARANJA, COLOR_BOX);
   tft.setCursor(185, 60);
   char bufM[3];
   sprintf(bufM, "%02d", minute);
@@ -187,22 +180,22 @@ void displayClock(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarm
   char timeBuf[6];
   sprintf(timeBuf, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
   tft.setTextSize(5);
-  tft.setTextColor(COLOR_CELESTE);
+  tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
   tft.setCursor(85, 60);
   tft.print(timeBuf);
 
   tft.setTextSize(2);
-  tft.setTextColor(COLOR_HINT);
+  tft.setTextColor(COLOR_HINT, COLOR_BG);
   tft.setCursor(25, 15);
   tft.print("Alarma: ");
   
   if (alarmEnabled) {
-    tft.setTextColor(COLOR_NARANJA);
+    tft.setTextColor(COLOR_NARANJA, COLOR_BG);
     char alarmBuf[6];
     sprintf(alarmBuf, "%02d:%02d", alarmHour, alarmMinute);
     tft.print(alarmBuf);
   } else {
-    tft.setTextColor(COLOR_DARK_GRAY);
+    tft.setTextColor(COLOR_DARK_GRAY, COLOR_BG);
     tft.print("OFF");
   }
 
@@ -212,7 +205,7 @@ void displayClock(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarm
 void displayAlarmFired() {
   tft.fillScreen(COLOR_FAIL);
   tft.setTextSize(4);
-  tft.setTextColor(COLOR_TITLE);
+  tft.setTextColor(COLOR_TITLE, COLOR_FAIL);
   tft.setCursor(43, 90);
   tft.print("¡DESPIERTA!");
 }

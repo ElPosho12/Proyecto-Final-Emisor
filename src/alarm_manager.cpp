@@ -2,19 +2,16 @@
 #include "display_manager.h"
 #include <Preferences.h>
 #include "wifi_manager.h"
-#include <Adafruit_ILI9341.h> 
+#include <TFT_eSPI.h> 
 
 // Traemos el objeto original tft
-extern Adafruit_ILI9341 tft; 
+extern TFT_eSPI tft; 
 
 // ─── Variables globales ───────────────────────────────────────────────────────
 #define LED_ROJO   32
 #define LED_VERDE  26
 #define LED_AZUL   33
 
-extern bool conectadoBT;
-extern bool oximetroHabilitadoEmisor;
-extern bool oximetroHabilitadoEmisor;
 extern bool conectadoBT;
 extern bool oximetroHabilitadoEmisor;
 
@@ -35,7 +32,7 @@ static bool hasPrevious = false;   // si hay alarma guardada en flash
 static unsigned long buttonPressedTimePlus  = 0;
 static unsigned long buttonPressedTimeMinus = 0;
 static unsigned long lastActionTime         = 0;
-static unsigned long lastPressEnter         = 0;
+static unsigned long lastPressEnter          = 0;
 
 #define LONG_PRESS_DELAY  500   // ms para detectar que se mantiene apretado
 #define REPEAT_INTERVAL   120   // ms de cambio al mantener apretado
@@ -124,7 +121,7 @@ static bool pressedEnter() {
 // ─── Guardar y Cargar desde Memoria Flash  ──────────────────────────────
 static void saveAlarmToFlash() {
   Preferences prefs;
-  prefs.begin("alarm", false);
+  prefs.begin("alarm", false); // Modo Escritura para guardar/crear
   prefs.putInt("hour",    alarmHour);
   prefs.putInt("minute",  alarmMinute);
   prefs.putBool("exists", true);
@@ -133,7 +130,10 @@ static void saveAlarmToFlash() {
 
 static bool loadAlarmFromFlash() {
   Preferences prefs;
-  prefs.begin("alarm", true);
+  // 🚀 FIX DEFINITIVO: Cambiado a 'false' (Lectura/Escritura) para que si no existe la partición,
+  // el ESP32 la cree en vez de tildarse con un error de NOT_FOUND.
+  prefs.begin("alarm", false); 
+  
   bool exists = prefs.getBool("exists", false);
   if (exists) {
     alarmHour   = prefs.getInt("hour",   7);
@@ -176,7 +176,6 @@ void alarmManagerLoop(struct tm timeinfo) {
   bool pMinus = handleMinusFluido();
 
   switch (alarmState) {
-
     // ── Pantalla de Confirmación de Alarma Anterior ───────────────────────────
     case STATE_CONFIRM_PREVIOUS:
       if (pPlus || pMinus) {
@@ -189,10 +188,10 @@ void alarmManagerLoop(struct tm timeinfo) {
       else if (pressedEnter()) {
         alarmEnabled = true;
         alarmFired   = false;
-        tft.fillScreen(ILI9341_BLACK);
+        tft.fillScreen(TFT_BLACK);
         alarmState = STATE_ACTIVE;
 
-        // 🚀 NUEVO: Prende en verde al confirmar alarma vieja
+        // 🚀 Prende en verde al confirmar alarma vieja
         encenderLedMomentaneo(LED_VERDE, 2000); 
 
         displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
@@ -220,7 +219,7 @@ void alarmManagerLoop(struct tm timeinfo) {
       }
       break;
 
-// ── Configurar minutos ────────────────────────────────────────────────────
+    // ── Configurar minutos ────────────────────────────────────────────────────
     case STATE_SET_MINUTE:
       if (pPlus) {
         tempMinute = (tempMinute + 5) % 60;
@@ -235,16 +234,17 @@ void alarmManagerLoop(struct tm timeinfo) {
         alarmEnabled = true;
         alarmFired   = false;
         saveAlarmToFlash();
-        tft.fillScreen(ILI9341_BLACK); 
+        tft.fillScreen(TFT_BLACK); 
         alarmState = STATE_ACTIVE;
 
-        // 🚀 NUEVO: Prende en verde al terminar de configurar hora y minutos
+        // 🚀 Prende en verde al terminar de configurar hora y minutos
         encenderLedMomentaneo(LED_VERDE, 2000); 
 
         displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
       }
       break;
-    //Reloj activo -----------------------------------------------
+
+    // Reloj activo -----------------------------------------------
     case STATE_ACTIVE:
       if (!(timeinfo.tm_hour == alarmHour && timeinfo.tm_min == alarmMinute)) {
         alarmFired = false;

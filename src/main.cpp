@@ -5,6 +5,7 @@
 #include "web_server.h"
 #include "alarm_manager.h"
 #include "display_manager.h"
+#include <nvs_flash.h>
 
 BluetoothSerial SerialBT;
 const String SLAVE_NAME = "ESP32_Receptor";
@@ -15,7 +16,6 @@ bool btIniciado  = false;
 #define LED_ROJO   32
 #define LED_VERDE  26
 #define LED_AZUL   33
-unsigned long tApagarLedMomentaneo = 0;
 
 // ─── Temporización No Bloqueante ──────────────────────────────────────────────
 unsigned long lastBTRetry    = 0;
@@ -23,11 +23,14 @@ unsigned long alarmStartTime = 0;
 bool alarmActive = false;
 
 // Variables para el control de los destellos momentáneos del LED
-unsigned long tApagadoLedMomentaneo = 0;
+unsigned long tApagadoLedMomentaneo = 0; // 🚀 FIX: Unificada con la asignación interna
 bool ledMomentaneoActivo = false;
 
 // Estado local para saber si el usuario apagó el oxímetro remoto
 bool oximetroHabilitadoEmisor = true;
+
+// Variable de control para el redibujado del reloj
+extern int lastMinute; // 🚀 FIX: Declarada la variable que faltaba en el combo
 
 // Estados anteriores para detectar el momento exacto de la conexión
 bool lastWifiState = false;
@@ -43,7 +46,7 @@ void encenderLedMomentaneo(uint8_t pin, unsigned long duracionMs) {
   digitalWrite(LED_AZUL, LOW);
   
   digitalWrite(pin, HIGH);
-  tApagarLedMomentaneo = millis() + duracionMs;
+  tApagadoLedMomentaneo = millis() + duracionMs; // 🚀 Usamos la variable unificada
   ledMomentaneoActivo = true;
 }
 
@@ -68,6 +71,16 @@ void btConnect() {
 void setup() {
   Serial.begin(115200);
   
+  esp_err_t err = nvs_flash_init();
+  if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      // Si la memoria está corrupta o no existe, la forzamos a formatearse
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      err = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(err);
+  
+  Serial.println("Memoria NVS Inicializada con éxito!");
+
   // Inicialización de Pines del LED RGB
   pinMode(LED_ROJO, OUTPUT);
   pinMode(LED_VERDE, OUTPUT);
@@ -79,7 +92,9 @@ void setup() {
   displayInit();
   wifiInit();
   webServerInit();
-  alarmManagerInit();
+  
+  // 🚀 FIX: ¡Descomentado! Ahora el administrador de alarmas arranca correctamente.
+  alarmManagerInit(); 
 }
 
 void loop() {
@@ -139,7 +154,7 @@ void loop() {
       SerialBT.write('2');
       oximetroHabilitadoEmisor = false; 
       
-      //Destello Rojo momentáneo al desactivar MAX30102
+      // Destello Rojo momentáneo al desactivar MAX30102
       encenderLedMomentaneo(LED_ROJO, 1500);
       
       if (timeOk) {
@@ -163,7 +178,7 @@ void loop() {
     }
   }
 
-  //Cuando suene la alarma, parpadea en rojo sin trabar el loop
+  // Cuando suene la alarma, parpadea en rojo sin trabar el loop
   if (alarmActive) {
     // Alterna el LED Rojo cada 250 milisegundos
     if ((now / 250) % 2 == 0) {
@@ -190,4 +205,4 @@ void loop() {
   }
 
   delay(1);
-} 
+}
