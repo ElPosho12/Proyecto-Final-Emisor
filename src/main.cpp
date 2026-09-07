@@ -13,8 +13,8 @@ bool conectadoBT = false;
 bool btIniciado  = false;
 
 // ─── Asignación de Pines del LED RGB ──────────────────────────────────────────
-#define LED_ROJO   32
-#define LED_VERDE  26
+#define LED_ROJO   26
+#define LED_VERDE  32
 #define LED_AZUL   33
 
 // ─── Temporización No Bloqueante ──────────────────────────────────────────────
@@ -25,6 +25,10 @@ bool alarmActive = false;
 // Variables para el control de los destellos momentáneos del LED
 unsigned long tApagadoLedMomentaneo = 0; // 🚀 FIX: Unificada con la asignación interna
 bool ledMomentaneoActivo = false;
+
+// Variables para el parpadeo VERDE al confirmar la alarma (previa o recién configurada)
+unsigned long tFinParpadeoVerde  = 0;
+bool ledParpadeoVerdeActivo = false;
 
 // Estado local para saber si el usuario apagó el oxímetro remoto
 bool oximetroHabilitadoEmisor = true;
@@ -48,6 +52,14 @@ void encenderLedMomentaneo(uint8_t pin, unsigned long duracionMs) {
   digitalWrite(pin, HIGH);
   tApagadoLedMomentaneo = millis() + duracionMs; // 🚀 Usamos la variable unificada
   ledMomentaneoActivo = true;
+}
+
+// Función para iniciar el parpadeo verde (confirmación de alarma anterior o recién configurada)
+void iniciarParpadeoVerde(unsigned long duracionMs) {
+  digitalWrite(LED_ROJO, LOW);
+  digitalWrite(LED_AZUL, LOW);
+  tFinParpadeoVerde = millis() + duracionMs;
+  ledParpadeoVerdeActivo = true;
 }
 
 void btConnect() {
@@ -175,6 +187,19 @@ void loop() {
         SerialBT.write('1');
         displayAlarmFired();
       }
+    }
+  }
+
+  // Parpadeo VERDE al confirmar alarma anterior o al terminar de configurar una nueva
+  if (ledParpadeoVerdeActivo) {
+    if ((now / 250) % 2 == 0) {
+      digitalWrite(LED_VERDE, HIGH);
+    } else {
+      digitalWrite(LED_VERDE, LOW);
+    }
+    if (now >= tFinParpadeoVerde) {
+      ledParpadeoVerdeActivo = false;
+      digitalWrite(LED_VERDE, LOW);
     }
   }
 

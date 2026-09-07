@@ -8,8 +8,8 @@
 extern TFT_eSPI tft; 
 
 // ─── Variables globales ───────────────────────────────────────────────────────
-#define LED_ROJO   32
-#define LED_VERDE  26
+#define LED_ROJO   26
+#define LED_VERDE  32
 #define LED_AZUL   33
 
 extern bool conectadoBT;
@@ -44,6 +44,14 @@ static unsigned long comboStartTime  = 0;
 static bool          comboFired      = false; 
 
 void encenderLedMomentaneo(uint8_t pin, unsigned long duracionMs);
+void iniciarParpadeoVerde(unsigned long duracionMs);
+
+// Enciende el LED azul fijo (mientras se está configurando la alarma) apagando los otros
+static void encenderLedAzulFijo() {
+  digitalWrite(LED_ROJO, LOW);
+  digitalWrite(LED_VERDE, LOW);
+  digitalWrite(LED_AZUL, HIGH);
+}
 
 static bool detectCombo() {
   bool plusLow  = (digitalRead(BTN_PLUS)  == LOW);
@@ -158,6 +166,7 @@ void alarmManagerInit() {
     tempHour   = 7;
     tempMinute = 0;
     alarmState = STATE_SET_HOUR;
+    encenderLedAzulFijo();
     displaySetHour(tempHour);
   }
 }
@@ -182,6 +191,7 @@ void alarmManagerLoop(struct tm timeinfo) {
         tempHour   = alarmHour;
         tempMinute = alarmMinute;
         alarmState = STATE_SET_HOUR;
+        encenderLedAzulFijo();
         displayResetMenuState();
         displaySetHour(tempHour);
       }
@@ -191,8 +201,8 @@ void alarmManagerLoop(struct tm timeinfo) {
         tft.fillScreen(TFT_BLACK);
         alarmState = STATE_ACTIVE;
 
-        // 🚀 Prende en verde al confirmar alarma vieja
-        encenderLedMomentaneo(LED_VERDE, 2000); 
+        // 🚀 Parpadea en verde al confirmar alarma vieja
+        iniciarParpadeoVerde(2000);
 
         displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
       }
@@ -237,8 +247,8 @@ void alarmManagerLoop(struct tm timeinfo) {
         tft.fillScreen(TFT_BLACK); 
         alarmState = STATE_ACTIVE;
 
-        // 🚀 Prende en verde al terminar de configurar hora y minutos
-        encenderLedMomentaneo(LED_VERDE, 2000); 
+        // 🚀 Parpadea en verde al terminar de configurar hora y minutos
+        iniciarParpadeoVerde(2000);
 
         displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
       }

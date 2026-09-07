@@ -66,7 +66,7 @@ static void drawStatusIndicators(bool wifiConectado, bool btConectado, bool oxim
 
 void displayInit() {
   tft.init();
-  tft.setRotation(3); // Horizontal panorámico
+  tft.setRotation(1); // Horizontal panorámico
   tft.fillScreen(COLOR_BG);
 }
 
