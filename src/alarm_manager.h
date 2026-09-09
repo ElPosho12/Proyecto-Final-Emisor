@@ -26,6 +26,11 @@ extern bool alarmEnabled;
 // main.cpp del emisor la lee, envía '2' por BT al receptor, y la hace false.
 extern bool comboPlusMinusPressed;
 
+// Se pone en true justo cuando se confirma la alarma (anterior o recién
+// configurada) y se entra en STATE_ACTIVE. main.cpp la lee, envía '3' por BT
+// al receptor (que recién ahí habilita las mediciones del oxímetro), y la hace false.
+extern bool alarmaRecienConfirmada;
+
 //Funciones públicas ----------------------------------------------
 void alarmManagerInit();
 void alarmManagerLoop(struct tm timeinfo);

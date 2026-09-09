@@ -16,7 +16,7 @@ TFT_eSPI tft = TFT_eSPI();
 #define COLOR_CELESTE    0x05FF   
 #define COLOR_NARANJA    0xFC60   
 #define COLOR_OK         TFT_GREEN
-#define COLOR_FAIL       TFT_RED
+#define COLOR_FAIL       TFT_BLACK
 
 // ─── Variables de Estado de Vistas ────────────────────────────────────────────
 int lastMinute       = -1;
@@ -95,7 +95,7 @@ void displayConfirmPrevious(int hour, int minute) {
 
   tft.setTextSize(1);
   tft.setTextColor(COLOR_HINT, COLOR_BG);
-  tft.setCursor(40, 150);
+  tft.setCursor(10, 150);
   tft.println("[ENTER] Confirmar vieja  /  [+] o [-] Crear nueva");
 }
 
@@ -206,6 +206,6 @@ void displayAlarmFired() {
   tft.fillScreen(COLOR_FAIL);
   tft.setTextSize(4);
   tft.setTextColor(COLOR_TITLE, COLOR_FAIL);
-  tft.setCursor(43, 90);
-  tft.print("¡DESPIERTA!");
+  tft.setCursor(40, 90);
+  tft.print("DESPERTATE");
 }

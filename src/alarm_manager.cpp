@@ -22,6 +22,7 @@ bool alarmFired         = false;
 bool alarmEnabled       = false;
 
 bool comboPlusMinusPressed = false;
+bool alarmaRecienConfirmada = false;
 
 // Valor temporal mientras el usuario configura
 static int  tempHour    = 7;
@@ -200,6 +201,7 @@ void alarmManagerLoop(struct tm timeinfo) {
         alarmFired   = false;
         tft.fillScreen(TFT_BLACK);
         alarmState = STATE_ACTIVE;
+        alarmaRecienConfirmada = true; // avisar al receptor que ya puede medir
 
         // 🚀 Parpadea en verde al confirmar alarma vieja
         iniciarParpadeoVerde(2000);
@@ -246,6 +248,7 @@ void alarmManagerLoop(struct tm timeinfo) {
         saveAlarmToFlash();
         tft.fillScreen(TFT_BLACK); 
         alarmState = STATE_ACTIVE;
+        alarmaRecienConfirmada = true; // avisar al receptor que ya puede medir
 
         // 🚀 Parpadea en verde al terminar de configurar hora y minutos
         iniciarParpadeoVerde(2000);

@@ -140,6 +140,15 @@ void loop() {
     encenderLedMomentaneo(LED_AZUL, 1500); // Se enciende 1,5 segundos en Azul
     Serial.println("[LED] Ambos conectados → Destello Azul.");
   }
+
+  // Si el BT se acaba de conectar/reconectar y la alarma ya estaba confirmada
+  // de antes (ej: se cortó el BT y volvió), reavisamos al receptor para que
+  // no se quede esperando una confirmación que ya había pasado.
+  if (currentBT && !lastBTState && alarmState == STATE_ACTIVE) {
+    SerialBT.write('3');
+    Serial.println("[BT] Reconexión detectada con alarma ya confirmada: reenviando '3'.");
+  }
+
   lastWifiState = currentWifi;
   lastBTState   = currentBT;
 
@@ -158,6 +167,16 @@ void loop() {
   
   if (timeOk && alarmState == STATE_ACTIVE && !alarmActive && !ledMomentaneoActivo) {
     displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, currentWifi, currentBT);
+  }
+
+  // 3.5 Alarma recién confirmada (nueva o "usar la anterior") → avisarle al
+  // receptor que ya puede empezar a medir pulsaciones/SpO2.
+  if (alarmaRecienConfirmada) {
+    if (conectadoBT) {
+      SerialBT.write('3');
+      Serial.println("[BT] Alarma confirmada: enviado '3' (habilitar mediciones).");
+    }
+    alarmaRecienConfirmada = false;
   }
 
   // 4. Combo +/− detectado → apagar oxímetro y prender rojo momentáneamente
