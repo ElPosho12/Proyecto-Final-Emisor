@@ -34,3 +34,8 @@ extern bool alarmaRecienConfirmada;
 //Funciones públicas ----------------------------------------------
 void alarmManagerInit();
 void alarmManagerLoop(struct tm timeinfo);
+
+// Redibuja desde cero la pantalla que corresponde al estado actual de la
+// alarma. Se usa despues de que un mensaje temporal (ej: aviso de WiFi
+// conectado) tapo toda la pantalla, para "volver" a donde se estaba.
+void alarmManagerRedraw(struct tm timeinfo, bool oximetroActivo, bool wifiConectado, bool btConectado);

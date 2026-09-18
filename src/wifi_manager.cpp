@@ -6,6 +6,16 @@ String savedSSID      = "";
 String savedPassword  = "";
 String wifiFailReason = "";
 
+static const char* AP_SSID = "Despertador-Config";
+static const char* AP_PASS = "12345678";   // minimo 8 caracteres para WPA2
+
+// Levanta el portal de configuracion (modo dual AP + STA)
+static void levantarAP() {
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAP(AP_SSID, AP_PASS);
+  Serial.printf("[WiFi] Portal AP en: http://%s\n", WiFi.softAPIP().toString().c_str());
+}
+
 // Carga las credenciales guardadas en flash
 void wifiInit() {
   Preferences prefs;
@@ -14,15 +24,11 @@ void wifiInit() {
   savedPassword = prefs.getString("password", "");
   prefs.end();
 
-  // Modo dual: Access Point (portal) + Station (conexión a tu red)
-  WiFi.mode(WIFI_AP_STA);
+  levantarAP();
 
-  // Iniciar AP con nombre fijo y contraseña
-  const char* AP_SSID = "Despertador-Config";
-  const char* AP_PASS = "12345678";          // mínimo 8 caracteres para WPA2
-  WiFi.softAP(AP_SSID, AP_PASS);
-
-  Serial.printf("[WiFi] Portal AP en: http://%s\n", WiFi.softAPIP().toString().c_str());
+  // El AP y el BT clasico comparten la misma antena de 2.4 GHz. Bajar un poco
+  // la potencia de TX del WiFi reduce la interferencia durante el inquiry.
+  WiFi.setTxPower(WIFI_POWER_11dBm);
 
   // Si ya había credenciales guardadas, intentar conectar
   if (savedSSID != "") {
@@ -56,6 +62,12 @@ void wifiConnect() {
     configTime(-3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
     Serial.println("[WiFi] NTP configurado (UTC-3)");
 
+    // Ya no hace falta el portal: apagarlo le devuelve tiempo de radio al
+    // Bluetooth y acelera bastante el emparejamiento con el receptor.
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_STA);
+    Serial.println("[WiFi] AP de configuracion apagado (radio libre para BT).");
+
   } else {
     wifiConnected = false;
 
@@ -64,17 +76,28 @@ void wifiConnect() {
         wifiFailReason = "Red no encontrada. ¿El nombre es correcto?";
         break;
       case WL_CONNECT_FAILED:
-        wifiFailReason = "Contraseña incorrecta.";
+        wifiFailReason = "Contrasena incorrecta.";
         break;
       default:
-        wifiFailReason = "No se pudo conectar (código " + String(WiFi.status()) + ")";
+        wifiFailReason = "No se pudo conectar (codigo " + String(WiFi.status()) + ")";
     }
     Serial.println("[WiFi] Error: " + wifiFailReason);
+
+    // Si fallo, volvemos a dejar el portal disponible para reconfigurar
+    levantarAP();
   }
 }
 
 bool wifiIsConnected() {
   // Re-verificar en tiempo real por si se cayó la conexión
-  wifiConnected = (WiFi.status() == WL_CONNECTED);
+  bool ahora = (WiFi.status() == WL_CONNECTED);
+
+  // Si la conexion se cayo, volver a ofrecer el portal de configuracion
+  if (wifiConnected && !ahora) {
+    Serial.println("[WiFi] Conexion perdida: reactivando portal AP.");
+    levantarAP();
+  }
+
+  wifiConnected = ahora;
   return wifiConnected;
 }

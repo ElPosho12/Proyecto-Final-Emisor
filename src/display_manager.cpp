@@ -75,6 +75,7 @@ void displayResetMenuState() {
   lastMinuteView = -1;
 }
 
+// ─── Conservado según tus cambios particulares ───────────────────────────────
 void displayConfirmPrevious(int hour, int minute) {
   tft.fillScreen(COLOR_BG);
   
@@ -93,39 +94,70 @@ void displayConfirmPrevious(int hour, int minute) {
   sprintf(buf, "%02d:%02d", hour, minute);
   tft.print(buf);
 
-  tft.setTextSize(1);
+  tft.setTextSize(2);
   tft.setTextColor(COLOR_HINT, COLOR_BG);
-  tft.setCursor(10, 150);
-  tft.println("[ENTER] Confirmar vieja  /  [+] o [-] Crear nueva");
+  tft.setCursor(15, 150);
+  tft.println("[ENTER]");
+  tft.setCursor(10, 170);
+  tft.println("Confirmar //");
+  tft.setCursor(150, 150);
+  tft.println("// [+] O [-]");
+  tft.setCursor(130, 170);
+  tft.println("// Crear nueva");
 }
 
+// ─── Nuevo Diseño Integrado: Configurar Hora ─────────────────────────────────
 void displaySetHour(int hour) {
   if (lastHourView == hour) return;
 
   if (lastHourView == -1) {
     tft.fillScreen(COLOR_BG);
+
+    // Tarjeta contenedor principal
+    tft.fillRoundRect(15, 15, 290, 210, 10, COLOR_BOX);
+    tft.drawRoundRect(15, 15, 290, 210, 10, COLOR_BOX_BORDER);
+
+    // Título de paso
     tft.setTextSize(2);
-    tft.setTextColor(COLOR_TITLE, COLOR_BG);
-    tft.setCursor(20, 25);
-    tft.println("Configurar Hora:");
+    tft.setTextColor(COLOR_TITLE, COLOR_BOX);
+    tft.setCursor(35, 30);
+    tft.println("Configurar Alarma");
 
-    tft.fillRect(80, 60, 55, 40, COLOR_BOX); 
-    tft.fillRect(145, 75, 10, 15, COLOR_BG);
-    tft.fillRect(165, 60, 55, 40, COLOR_BOX);
+    // Subtítulo con el paso activo
+    tft.setTextSize(1);
+    tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
+    tft.setCursor(35, 55);
+    tft.println("PASO 1/2: Selecciona la Hora");
 
-    tft.setTextSize(4);
-    tft.setTextColor(COLOR_DARK_GRAY, COLOR_BOX);
-    tft.setCursor(165, 60);
-    tft.print("--");
-    tft.setTextColor(COLOR_TITLE, COLOR_BG);
-    tft.setCursor(145, 60);
+    // Dos puntos separadores de hora y minutos
+    tft.setTextSize(5);
+    tft.setTextColor(COLOR_TITLE, COLOR_BOX);
+    tft.setCursor(152, 95);
     tft.print(":");
+
+    // Caja estática inactiva de minutos
+    tft.fillRoundRect(175, 90, 85, 60, 8, COLOR_BG);
+    tft.drawRoundRect(175, 90, 85, 60, 8, COLOR_BOX_BORDER);
+    tft.setTextSize(5);
+    tft.setTextColor(COLOR_DARK_GRAY, COLOR_BG);
+    tft.setCursor(190, 100);
+    tft.print("--");
+
+    // Barra de guía inferior
+    tft.fillRoundRect(25, 175, 270, 30, 6, COLOR_BG);
+    tft.setTextSize(1);
+    tft.setTextColor(COLOR_HINT, COLOR_BG);
+    tft.setCursor(35, 186);
+    tft.print("[+] / [-] Ajustar   [ENTER] Siguiente");
   }
 
-  tft.fillRect(80, 60, 55, 40, COLOR_BOX);
+  // Caja resaltada activa para la Hora
+  tft.fillRoundRect(60, 90, 85, 60, 8, COLOR_BG);
+  tft.drawRoundRect(60, 90, 85, 60, 8, COLOR_CELESTE);
+  
   tft.setTextSize(5);
-  tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
-  tft.setCursor(80, 60);
+  tft.setTextColor(COLOR_CELESTE, COLOR_BG);
+  tft.setCursor(75, 100);
   char bufH[3];
   sprintf(bufH, "%02d", hour);
   tft.print(bufH);
@@ -133,34 +165,60 @@ void displaySetHour(int hour) {
   lastHourView = hour;
 }
 
+// ─── Nuevo Diseño Integrado: Configurar Minutos ──────────────────────────────
 void displaySetMinute(int hour, int minute) {
   if (lastMinuteView == minute) return;
 
   if (lastMinuteView == -1) {
-    tft.fillRect(20, 25, 250, 25, COLOR_BG);
-    tft.setTextSize(2);
-    tft.setTextColor(COLOR_TITLE, COLOR_BG);
-    tft.setCursor(20, 25);
-    tft.println("Configurar Minutos:");
+    tft.fillScreen(COLOR_BG);
 
-    tft.fillRect(80, 60, 55, 40, COLOR_BOX);
+    // Tarjeta contenedor principal
+    tft.fillRoundRect(15, 15, 290, 210, 10, COLOR_BOX);
+    tft.drawRoundRect(15, 15, 290, 210, 10, COLOR_BOX_BORDER);
+
+    // Título de paso
+    tft.setTextSize(2);
+    tft.setTextColor(COLOR_TITLE, COLOR_BOX);
+    tft.setCursor(35, 30);
+    tft.println("Configurar Alarma");
+
+    // Subtítulo con el paso activo
+    tft.setTextSize(1);
+    tft.setTextColor(COLOR_NARANJA, COLOR_BOX);
+    tft.setCursor(35, 55);
+    tft.println("PASO 2/2: Selecciona los Minutos");
+
+    // Dos puntos separadores
     tft.setTextSize(5);
-    tft.setTextColor(COLOR_DARK_GRAY, COLOR_BOX);
-    tft.setCursor(80, 60);
+    tft.setTextColor(COLOR_TITLE, COLOR_BOX);
+    tft.setCursor(152, 95);
+    tft.print(":");
+
+    // Caja fija de la hora ya configurada
+    tft.fillRoundRect(60, 90, 85, 60, 8, COLOR_BG);
+    tft.drawRoundRect(60, 90, 85, 60, 8, COLOR_DARK_GRAY);
+    tft.setTextSize(5);
+    tft.setTextColor(COLOR_DARK_GRAY, COLOR_BG);
+    tft.setCursor(75, 100);
     char bufH[3];
     sprintf(bufH, "%02d", hour);
     tft.print(bufH);
 
-    tft.setTextSize(4);
-    tft.setTextColor(COLOR_TITLE, COLOR_BG);
-    tft.setCursor(145, 60);
-    tft.print(":");
+    // Barra de guía inferior
+    tft.fillRoundRect(25, 175, 270, 30, 6, COLOR_BG);
+    tft.setTextSize(1);
+    tft.setTextColor(COLOR_HINT, COLOR_BG);
+    tft.setCursor(35, 186);
+    tft.print("[+] / [-] Ajustar   [ENTER] Guardar");
   }
 
-  tft.fillRect(185, 60, 55, 40, COLOR_BOX); 
+  // Caja resaltada activa para los Minutos
+  tft.fillRoundRect(175, 90, 85, 60, 8, COLOR_BG);
+  tft.drawRoundRect(175, 90, 85, 60, 8, COLOR_NARANJA);
+
   tft.setTextSize(5);
-  tft.setTextColor(COLOR_NARANJA, COLOR_BOX);
-  tft.setCursor(185, 60);
+  tft.setTextColor(COLOR_NARANJA, COLOR_BG);
+  tft.setCursor(190, 100);
   char bufM[3];
   sprintf(bufM, "%02d", minute);
   tft.print(bufM);
@@ -200,6 +258,79 @@ void displayClock(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarm
   }
 
   drawStatusIndicators(wifiConectado, btConectado, oximetroActivo);
+}
+
+// ─── Diseño Nuevo: WiFi Conectado ──────────────────────────────────────────────
+void displayWifiConectado() {
+  tft.fillScreen(COLOR_BG);
+
+  tft.fillRoundRect(20, 30, 280, 180, 10, COLOR_BOX);
+  tft.drawRoundRect(20, 30, 280, 180, 10, COLOR_CELESTE);
+
+  tft.setTextSize(3);
+  tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
+  tft.setCursor(95, 55);
+  tft.print("Wi-Fi");
+
+  tft.setTextSize(2);
+  tft.setTextColor(COLOR_OK, COLOR_BOX);
+  tft.setCursor(80, 105);
+  tft.print("CONECTADO");
+
+  tft.fillRoundRect(50, 145, 220, 6, 3, COLOR_OK);
+
+  tft.setTextSize(1);
+  tft.setTextColor(COLOR_HINT, COLOR_BOX);
+  tft.setCursor(85, 170);
+  tft.print("Red sincronizada");
+}
+
+// ─── Diseño Nuevo: Bluetooth Conectado ─────────────────────────────────────────
+void displayBtConectado() {
+  tft.fillScreen(COLOR_BG);
+
+  tft.fillRoundRect(20, 30, 280, 180, 10, COLOR_BOX);
+  tft.drawRoundRect(20, 30, 280, 180, 10, COLOR_NARANJA);
+
+  tft.setTextSize(3);
+  tft.setTextColor(COLOR_NARANJA, COLOR_BOX);
+  tft.setCursor(65, 55);
+  tft.print("BLUETOOTH");
+
+  tft.setTextSize(2);
+  tft.setTextColor(COLOR_OK, COLOR_BOX);
+  tft.setCursor(70, 105);
+  tft.print("PULSERA OK");
+
+  tft.fillRoundRect(50, 145, 220, 6, 3, COLOR_OK);
+
+  tft.setTextSize(1);
+  tft.setTextColor(COLOR_HINT, COLOR_BOX);
+  tft.setCursor(80, 170);
+  tft.print("Receptor Vinculado");
+}
+
+// ─── Franja de estado "Buscando WiFi.../Bluetooth..." ─────────────────────────
+#define ESTADO_ALTO_LINEA  14
+
+static int estadoBusquedaY() {
+  return tft.height() - (2 * ESTADO_ALTO_LINEA);
+}
+
+static void dibujarLineaEstado(int y, bool conectado, const char* texto) {
+  tft.fillRect(0, y, tft.width(), ESTADO_ALTO_LINEA, COLOR_BG);
+  if (!conectado) {
+    tft.setTextSize(1);
+    tft.setTextColor(COLOR_HINT, COLOR_BG);
+    tft.setCursor(6, y + 3);
+    tft.print(texto);
+  }
+}
+
+void displayEstadoBusqueda(bool wifiConectado, bool btConectado) {
+  int yBase = estadoBusquedaY();
+  dibujarLineaEstado(yBase,                     wifiConectado, "Buscando WiFi...");
+  dibujarLineaEstado(yBase + ESTADO_ALTO_LINEA, btConectado,   "Buscando Bluetooth...");
 }
 
 void displayAlarmFired() {
