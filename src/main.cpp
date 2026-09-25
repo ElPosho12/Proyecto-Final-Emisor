@@ -64,6 +64,12 @@ unsigned long tFinMensajeWifi      = 0;
 bool          mostrandoMensajeBT   = false;
 unsigned long tFinMensajeBT       = 0;
 
+// Instrucciones iniciales de configuración de WiFi: solo aparecen si todavía
+// no hay SSID/clave guardados, y solo una vez al arrancar, durante 10 s.
+#define INSTRUCCIONES_WIFI_DURACION_MS  10000
+bool          mostrandoInstruccionesWifi = false;
+unsigned long tFinInstruccionesWifi      = 0;
+
 // Franja inferior "Buscando WiFi.../Bluetooth...": se redibuja cada 200 ms
 #define ESTADO_BUSQUEDA_INTERVALO_MS 200
 unsigned long tUltimoEstadoBusqueda = 0;
@@ -214,6 +220,15 @@ void setup() {
   webServerInit();
 
   alarmManagerInit();
+
+  // Si todavia no hay credenciales de WiFi guardadas, tapamos la pantalla
+  // inicial con las instrucciones de configuracion durante 10 segundos.
+  if (savedSSID == "") {
+    displayInstruccionesWifi();
+    mostrandoInstruccionesWifi = true;
+    tFinInstruccionesWifi = millis() + INSTRUCCIONES_WIFI_DURACION_MS;
+    Serial.println("[WiFi] Sin credenciales guardadas: mostrando instrucciones de configuracion.");
+  }
 }
 
 void loop() {
@@ -240,7 +255,7 @@ void loop() {
 
   // Flanco de conexión exitosa del Bluetooth
   if (currentBT && !lastBTState) {
-    if (!mostrandoMensajeWifi) {
+    if (!mostrandoMensajeWifi && !mostrandoInstruccionesWifi) {
       displayBtConectado();
       mostrandoMensajeBT = true;
       tFinMensajeBT = now + MENSAJE_DURACION_MS;
@@ -261,7 +276,7 @@ void loop() {
   lastBTState   = currentBT;
 
   // Franja "Buscando WiFi.../Bluetooth..." abajo de la pantalla
-  if (!mostrandoMensajeWifi && !mostrandoMensajeBT && !alarmActive &&
+  if (!mostrandoInstruccionesWifi && !mostrandoMensajeWifi && !mostrandoMensajeBT && !alarmActive &&
       (now - tUltimoEstadoBusqueda >= ESTADO_BUSQUEDA_INTERVALO_MS)) {
     tUltimoEstadoBusqueda = now;
     displayEstadoBusqueda(currentWifi, currentBT);
@@ -279,7 +294,19 @@ void loop() {
   bool timeOk = getLocalTime(&timeinfo, 0);
 
   // Control de temporización de avisos temporales en pantalla
-  if (mostrandoMensajeWifi) {
+  if (mostrandoInstruccionesWifi) {
+    if (now >= tFinInstruccionesWifi) {
+      mostrandoInstruccionesWifi = false;
+      // Si mientras tanto ya se disparo algun otro aviso, lo dejamos seguir
+      // su propio timer; si no, restauramos la pantalla normal del estado
+      // actual de la alarma.
+      if (!mostrandoMensajeWifi && !mostrandoMensajeBT) {
+        alarmManagerRedraw(timeinfo, oximetroHabilitadoEmisor, currentWifi, currentBT);
+      }
+      Serial.println("[WiFi] Instrucciones terminadas: pantalla restaurada.");
+    }
+  }
+  else if (mostrandoMensajeWifi) {
     if (now >= tFinMensajeWifi) {
       mostrandoMensajeWifi = false;
       if (mostrandoMensajeBT) {

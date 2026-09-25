@@ -18,6 +18,10 @@ void displayResetMenuState();
 void displayWifiConectado();
 void displayBtConectado();
 
+// Instrucciones de configuración inicial (solo si todavía no hay SSID/clave
+// guardados). Se muestra 10 s al arrancar y después no vuelve a aparecer.
+void displayInstruccionesWifi();
+
 // Franja fija en la parte inferior de la pantalla: muestra "Buscando WiFi..."
 // y/o "Buscando Bluetooth..." mientras cada uno no esté conectado, y se
 // oculta apenas se encuentra. Convive con cualquier otra pantalla.

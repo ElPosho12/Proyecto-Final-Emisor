@@ -310,6 +310,54 @@ void displayBtConectado() {
   tft.print("Receptor Vinculado");
 }
 
+// ─── Diseño Nuevo: Instrucciones iniciales de configuración de WiFi ───────────
+// Se muestra solo si todavia no hay SSID/clave guardados (savedSSID == "").
+void displayInstruccionesWifi() {
+  tft.fillScreen(COLOR_BG);
+
+  tft.fillRoundRect(10, 10, 300, 220, 10, COLOR_BOX);
+  tft.drawRoundRect(10, 10, 300, 220, 10, COLOR_CELESTE);
+
+  tft.setTextSize(2);
+  tft.setTextColor(COLOR_TITLE, COLOR_BOX);
+  tft.setCursor(28, 22);
+  tft.println("Configura tu WiFi");
+
+  tft.drawFastHLine(25, 48, 270, COLOR_BOX_BORDER);
+
+  // Paso 1
+  tft.setTextSize(1);
+  tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
+  tft.setCursor(25, 60);
+  tft.println("PASO 1: Conectate al wifi 'Despertador-config'");
+  tft.setCursor(25, 70 );
+  tft.println("e ingresa a la pagina");
+  tft.setTextSize(2);
+  tft.setTextColor(COLOR_OK, COLOR_BOX);
+  tft.setCursor(25, 90);
+  tft.println("http://192.168.4.1");
+
+  // Paso 2
+  tft.setTextSize(1);
+  tft.setTextColor(COLOR_NARANJA, COLOR_BOX);
+  tft.setCursor(25, 112);
+  tft.println("PASO 2: Ingresa el nombre y");
+  tft.setCursor(25, 124);
+  tft.println("contrasena de tu WiFi");
+
+  tft.drawFastHLine(25, 152, 270, COLOR_BOX_BORDER);
+
+  // Advertencia pequeña
+  tft.setTextSize(1);
+  tft.setTextColor(COLOR_HINT, COLOR_BOX);
+  tft.setCursor(25, 166);
+  tft.println("En caso de querer cambiar de WiFi,");
+  tft.setCursor(25, 178);
+  tft.println("volve a entrar a la pagina e");
+  tft.setCursor(25, 190);
+  tft.println("ingresalo de nuevo.");
+}
+
 // ─── Franja de estado "Buscando WiFi.../Bluetooth..." ─────────────────────────
 #define ESTADO_ALTO_LINEA  14
 
