@@ -7,17 +7,17 @@ String savedPassword  = "";
 String wifiFailReason = "";
 
 static const char* AP_SSID = "Despertador-Config";
-static const char* AP_PASS = "12345678";   // minimo 8 caracteres para WPA2
+static const char* AP_PASS = "12345678";   // WPA2 pide 8 caracteres minimo
 
-// Levanta el portal de configuracion (modo dual AP + STA)
+// Levanta el portal de configuracion (AP + STA)
 static void levantarAP() {
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(AP_SSID, AP_PASS);
   Serial.printf("[WiFi] Portal AP en: http://%s\n", WiFi.softAPIP().toString().c_str());
 }
 
-// Carga las credenciales guardadas en flash
-void wifiInit() {
+// Carga credenciales guardadas y conecta si hay
+void iniciarWifi() {
   Preferences prefs;
   prefs.begin("wificfg", true);
   savedSSID     = prefs.getString("ssid",     "");
@@ -26,18 +26,16 @@ void wifiInit() {
 
   levantarAP();
 
-  // El AP y el BT clasico comparten la misma antena de 2.4 GHz. Bajar un poco
-  // la potencia de TX del WiFi reduce la interferencia durante el inquiry.
+  // Baja potencia de TX: menos interferencia con el Bluetooth
   WiFi.setTxPower(WIFI_POWER_11dBm);
 
-  // Si ya había credenciales guardadas, intentar conectar
   if (savedSSID != "") {
-    wifiConnect();
+    conectarWifi();
   }
 }
 
-// Intenta conectarse a la red guardada
-void wifiConnect() {
+// Intenta conectar a la red guardada
+void conectarWifi() {
   if (savedSSID == "") return;
 
   Serial.printf("[WiFi] Conectando a '%s' ...\n", savedSSID.c_str());
@@ -58,15 +56,14 @@ void wifiConnect() {
     wifiConnected = true;
     Serial.printf("[WiFi] Conectado. IP: %s\n", WiFi.localIP().toString().c_str());
 
-    // Sincronizar hora NTP (UTC-3 Buenos Aires, sin horario de verano)
+    // Hora por NTP (UTC-3 Buenos Aires)
     configTime(-3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
-    Serial.println("[WiFi] NTP configurado (UTC-3)");
+    Serial.println("[WiFi] NTP configurado.");
 
-    // Ya no hace falta el portal: apagarlo le devuelve tiempo de radio al
-    // Bluetooth y acelera bastante el emparejamiento con el receptor.
+    // Apagar el AP libera radio para el Bluetooth
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_STA);
-    Serial.println("[WiFi] AP de configuracion apagado (radio libre para BT).");
+    Serial.println("[WiFi] AP apagado.");
 
   } else {
     wifiConnected = false;
@@ -83,18 +80,16 @@ void wifiConnect() {
     }
     Serial.println("[WiFi] Error: " + wifiFailReason);
 
-    // Si fallo, volvemos a dejar el portal disponible para reconfigurar
     levantarAP();
   }
 }
 
-bool wifiIsConnected() {
-  // Re-verificar en tiempo real por si se cayó la conexión
+bool wifiEstaConectado() {
   bool ahora = (WiFi.status() == WL_CONNECTED);
 
-  // Si la conexion se cayo, volver a ofrecer el portal de configuracion
+  // Si se cayo la conexion, reabrir el portal
   if (wifiConnected && !ahora) {
-    Serial.println("[WiFi] Conexion perdida: reactivando portal AP.");
+    Serial.println("[WiFi] Conexion perdida: reactivando portal.");
     levantarAP();
   }
 

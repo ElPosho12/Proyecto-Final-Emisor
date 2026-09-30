@@ -3,26 +3,23 @@
 #include <Arduino.h>
 #include "time.h"
 
-// Variables compartidas para el control de refresco
-extern int lastMinute;
+// Variable compartida para el control de refresco
+extern int UltimoMinuto;
 
-void displayInit();
-void displayConfirmPrevious(int hour, int minute);
-void displaySetHour(int hour);
-void displaySetMinute(int hour, int minute);
-void displayClock(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarmEnabled, bool oximetroActivo, bool wifiConectado, bool btConectado);
-void displayAlarmFired();
-void displayResetMenuState();
+void iniciarPantalla();
+void mostrarConfirmarAnterior(int hour, int minute);
+void mostrarConfigurarHora(int hour);
+void mostrarConfigurarMinutos(int hour, int minute);
+void mostrarReloj(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarmEnabled, bool oximetroActivo, bool wifiConectado, bool btConectado);
+void mostrarAlarmaSonando();
+void reiniciarEstadoMenu();
 
 // Pantallas de conexión
-void displayWifiConectado();
-void displayBtConectado();
+void mostrarWifiConectado();
+void mostrarBtConectado();
 
-// Instrucciones de configuración inicial (solo si todavía no hay SSID/clave
-// guardados). Se muestra 10 s al arrancar y después no vuelve a aparecer.
-void displayInstruccionesWifi();
+// Instrucciones iniciales de WiFi (solo si no hay SSID guardado)
+void mostrarInstruccionesWifi();
 
-// Franja fija en la parte inferior de la pantalla: muestra "Buscando WiFi..."
-// y/o "Buscando Bluetooth..." mientras cada uno no esté conectado, y se
-// oculta apenas se encuentra. Convive con cualquier otra pantalla.
-void displayEstadoBusqueda(bool wifiConectado, bool btConectado);
+// Franja inferior: "Buscando WiFi..." / "Buscando Bluetooth..."
+void mostrarEstadoBusqueda(bool wifiConectado, bool btConectado);

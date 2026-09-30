@@ -1,33 +1,30 @@
 #include "display_manager.h"
 #include <TFT_eSPI.h>
 
-// ─── Objeto de pantalla TFT_eSPI ───────────────────────────────────────────────
-// Los pines (MOSI, CLK, CS, DC, RST) NO se pasan acá: se configuran en
-// platformio.ini (build_flags) o en User_Setup.h de la librería TFT_eSPI.
+// Pines de la TFT se configuran en platformio.ini / User_Setup.h
 TFT_eSPI tft = TFT_eSPI();
 
-// ─── Paleta de Colores de la Interfaz ─────────────────────────────────────────
+// Paleta de colores
 #define COLOR_BG         TFT_BLACK
 #define COLOR_TITLE      TFT_WHITE
-#define COLOR_HINT       0x7BEF   
-#define COLOR_DARK_GRAY  0x3186   
-#define COLOR_BOX        0x1082   
-#define COLOR_BOX_BORDER 0x4208   
-#define COLOR_CELESTE    0x05FF   
-#define COLOR_NARANJA    0xFC60   
+#define COLOR_HINT       0x7BEF
+#define COLOR_DARK_GRAY  0x3186
+#define COLOR_BOX        0x1082
+#define COLOR_BOX_BORDER 0x4208
+#define COLOR_CELESTE    0x05FF
+#define COLOR_NARANJA    0xFC60
 #define COLOR_OK         TFT_GREEN
 #define COLOR_FAIL       TFT_BLACK
 
-// ─── Variables de Estado de Vistas ────────────────────────────────────────────
-int lastMinute       = -1;
-static int lastHourView     = -1;
-static int lastMinuteView   = -1;
+int UltimoMinuto            = -1;
+static int lastHourView   = -1;
+static int lastMinuteView = -1;
 
-static void drawStatusIndicators(bool wifiConectado, bool btConectado, bool oximetroActivo) {
+// Dibuja los tres indicadores de estado (WiFi, BT, oximetro)
+static void dibujarIndicadoresEstado(bool wifiConectado, bool btConectado, bool oximetroActivo) {
   int radius = 6;
   tft.setTextSize(2);
-  
-  // 1. Estado WiFi
+
   tft.setCursor(40, 140);
   if (wifiConectado) {
     tft.fillCircle(25, 143, radius, COLOR_OK);
@@ -39,7 +36,6 @@ static void drawStatusIndicators(bool wifiConectado, bool btConectado, bool oxim
     tft.println("WIFI DESCONECT.");
   }
 
-  // 2. Estado Bluetooth
   tft.setCursor(40, 160);
   if (btConectado) {
     tft.fillCircle(25, 163, radius, COLOR_OK);
@@ -51,7 +47,6 @@ static void drawStatusIndicators(bool wifiConectado, bool btConectado, bool oxim
     tft.println("RECEPTOR OFF");
   }
 
-  // 3. Estado en tiempo real del oxímetro MAX30102
   tft.setCursor(40, 180);
   if (oximetroActivo) {
     tft.fillCircle(25, 183, radius, COLOR_OK);
@@ -64,21 +59,21 @@ static void drawStatusIndicators(bool wifiConectado, bool btConectado, bool oxim
   }
 }
 
-void displayInit() {
+void iniciarPantalla() {
   tft.init();
-  tft.setRotation(3); // Horizontal panorámico
+  tft.setRotation(3);
   tft.fillScreen(COLOR_BG);
 }
 
-void displayResetMenuState() {
+void reiniciarEstadoMenu() {
   lastHourView   = -1;
   lastMinuteView = -1;
 }
 
-// ─── Conservado según tus cambios particulares ───────────────────────────────
-void displayConfirmPrevious(int hour, int minute) {
+// Pantalla: confirmar alarma anterior
+void mostrarConfirmarAnterior(int hour, int minute) {
   tft.fillScreen(COLOR_BG);
-  
+
   tft.setTextSize(2);
   tft.setTextColor(COLOR_TITLE, COLOR_BG);
   tft.setCursor(20, 30);
@@ -106,36 +101,31 @@ void displayConfirmPrevious(int hour, int minute) {
   tft.println("// Crear nueva");
 }
 
-// ─── Nuevo Diseño Integrado: Configurar Hora ─────────────────────────────────
-void displaySetHour(int hour) {
+// Pantalla: configurar hora
+void mostrarConfigurarHora(int hour) {
   if (lastHourView == hour) return;
 
   if (lastHourView == -1) {
     tft.fillScreen(COLOR_BG);
 
-    // Tarjeta contenedor principal
     tft.fillRoundRect(15, 15, 290, 210, 10, COLOR_BOX);
     tft.drawRoundRect(15, 15, 290, 210, 10, COLOR_BOX_BORDER);
 
-    // Título de paso
     tft.setTextSize(2);
     tft.setTextColor(COLOR_TITLE, COLOR_BOX);
     tft.setCursor(35, 30);
     tft.println("Configurar Alarma");
 
-    // Subtítulo con el paso activo
     tft.setTextSize(1);
     tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
     tft.setCursor(35, 55);
     tft.println("PASO 1/2: Selecciona la Hora");
 
-    // Dos puntos separadores de hora y minutos
     tft.setTextSize(5);
     tft.setTextColor(COLOR_TITLE, COLOR_BOX);
     tft.setCursor(152, 95);
     tft.print(":");
 
-    // Caja estática inactiva de minutos
     tft.fillRoundRect(175, 90, 85, 60, 8, COLOR_BG);
     tft.drawRoundRect(175, 90, 85, 60, 8, COLOR_BOX_BORDER);
     tft.setTextSize(5);
@@ -143,7 +133,6 @@ void displaySetHour(int hour) {
     tft.setCursor(190, 100);
     tft.print("--");
 
-    // Barra de guía inferior
     tft.fillRoundRect(25, 175, 270, 30, 6, COLOR_BG);
     tft.setTextSize(1);
     tft.setTextColor(COLOR_HINT, COLOR_BG);
@@ -151,10 +140,9 @@ void displaySetHour(int hour) {
     tft.print("[+] / [-] Ajustar   [ENTER] Siguiente");
   }
 
-  // Caja resaltada activa para la Hora
   tft.fillRoundRect(60, 90, 85, 60, 8, COLOR_BG);
   tft.drawRoundRect(60, 90, 85, 60, 8, COLOR_CELESTE);
-  
+
   tft.setTextSize(5);
   tft.setTextColor(COLOR_CELESTE, COLOR_BG);
   tft.setCursor(75, 100);
@@ -165,36 +153,31 @@ void displaySetHour(int hour) {
   lastHourView = hour;
 }
 
-// ─── Nuevo Diseño Integrado: Configurar Minutos ──────────────────────────────
-void displaySetMinute(int hour, int minute) {
+// Pantalla: configurar minutos
+void mostrarConfigurarMinutos(int hour, int minute) {
   if (lastMinuteView == minute) return;
 
   if (lastMinuteView == -1) {
     tft.fillScreen(COLOR_BG);
 
-    // Tarjeta contenedor principal
     tft.fillRoundRect(15, 15, 290, 210, 10, COLOR_BOX);
     tft.drawRoundRect(15, 15, 290, 210, 10, COLOR_BOX_BORDER);
 
-    // Título de paso
     tft.setTextSize(2);
     tft.setTextColor(COLOR_TITLE, COLOR_BOX);
     tft.setCursor(35, 30);
     tft.println("Configurar Alarma");
 
-    // Subtítulo con el paso activo
     tft.setTextSize(1);
     tft.setTextColor(COLOR_NARANJA, COLOR_BOX);
     tft.setCursor(35, 55);
     tft.println("PASO 2/2: Selecciona los Minutos");
 
-    // Dos puntos separadores
     tft.setTextSize(5);
     tft.setTextColor(COLOR_TITLE, COLOR_BOX);
     tft.setCursor(152, 95);
     tft.print(":");
 
-    // Caja fija de la hora ya configurada
     tft.fillRoundRect(60, 90, 85, 60, 8, COLOR_BG);
     tft.drawRoundRect(60, 90, 85, 60, 8, COLOR_DARK_GRAY);
     tft.setTextSize(5);
@@ -204,7 +187,6 @@ void displaySetMinute(int hour, int minute) {
     sprintf(bufH, "%02d", hour);
     tft.print(bufH);
 
-    // Barra de guía inferior
     tft.fillRoundRect(25, 175, 270, 30, 6, COLOR_BG);
     tft.setTextSize(1);
     tft.setTextColor(COLOR_HINT, COLOR_BG);
@@ -212,7 +194,6 @@ void displaySetMinute(int hour, int minute) {
     tft.print("[+] / [-] Ajustar   [ENTER] Guardar");
   }
 
-  // Caja resaltada activa para los Minutos
   tft.fillRoundRect(175, 90, 85, 60, 8, COLOR_BG);
   tft.drawRoundRect(175, 90, 85, 60, 8, COLOR_NARANJA);
 
@@ -222,13 +203,14 @@ void displaySetMinute(int hour, int minute) {
   char bufM[3];
   sprintf(bufM, "%02d", minute);
   tft.print(bufM);
-  
+
   lastMinuteView = minute;
 }
 
-void displayClock(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarmEnabled, bool oximetroActivo, bool wifiConectado, bool btConectado) {
-  if (timeinfo.tm_min == lastMinute) return;
-  lastMinute = timeinfo.tm_min;
+// Pantalla: reloj normal
+void mostrarReloj(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarmEnabled, bool oximetroActivo, bool wifiConectado, bool btConectado) {
+  if (timeinfo.tm_min == UltimoMinuto) return;
+  UltimoMinuto = timeinfo.tm_min;
 
   tft.fillScreen(COLOR_BG);
 
@@ -246,7 +228,7 @@ void displayClock(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarm
   tft.setTextColor(COLOR_HINT, COLOR_BG);
   tft.setCursor(25, 15);
   tft.print("Alarma: ");
-  
+
   if (alarmEnabled) {
     tft.setTextColor(COLOR_NARANJA, COLOR_BG);
     char alarmBuf[6];
@@ -257,11 +239,11 @@ void displayClock(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarm
     tft.print("OFF");
   }
 
-  drawStatusIndicators(wifiConectado, btConectado, oximetroActivo);
+  dibujarIndicadoresEstado(wifiConectado, btConectado, oximetroActivo);
 }
 
-// ─── Diseño Nuevo: WiFi Conectado ──────────────────────────────────────────────
-void displayWifiConectado() {
+// Pantalla: WiFi conectado
+void mostrarWifiConectado() {
   tft.fillScreen(COLOR_BG);
 
   tft.fillRoundRect(20, 30, 280, 180, 10, COLOR_BOX);
@@ -285,8 +267,8 @@ void displayWifiConectado() {
   tft.print("Red sincronizada");
 }
 
-// ─── Diseño Nuevo: Bluetooth Conectado ─────────────────────────────────────────
-void displayBtConectado() {
+// Pantalla: Bluetooth conectado
+void mostrarBtConectado() {
   tft.fillScreen(COLOR_BG);
 
   tft.fillRoundRect(20, 30, 280, 180, 10, COLOR_BOX);
@@ -310,9 +292,8 @@ void displayBtConectado() {
   tft.print("Receptor Vinculado");
 }
 
-// ─── Diseño Nuevo: Instrucciones iniciales de configuración de WiFi ───────────
-// Se muestra solo si todavia no hay SSID/clave guardados (savedSSID == "").
-void displayInstruccionesWifi() {
+// Pantalla: instrucciones iniciales de WiFi
+void mostrarInstruccionesWifi() {
   tft.fillScreen(COLOR_BG);
 
   tft.fillRoundRect(10, 10, 300, 220, 10, COLOR_BOX);
@@ -325,19 +306,17 @@ void displayInstruccionesWifi() {
 
   tft.drawFastHLine(25, 48, 270, COLOR_BOX_BORDER);
 
-  // Paso 1
   tft.setTextSize(1);
   tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
   tft.setCursor(25, 60);
   tft.println("PASO 1: Conectate al wifi 'Despertador-config'");
-  tft.setCursor(25, 70 );
+  tft.setCursor(25, 70);
   tft.println("e ingresa a la pagina");
   tft.setTextSize(2);
   tft.setTextColor(COLOR_OK, COLOR_BOX);
   tft.setCursor(25, 90);
   tft.println("http://192.168.4.1");
 
-  // Paso 2
   tft.setTextSize(1);
   tft.setTextColor(COLOR_NARANJA, COLOR_BOX);
   tft.setCursor(25, 112);
@@ -347,7 +326,6 @@ void displayInstruccionesWifi() {
 
   tft.drawFastHLine(25, 152, 270, COLOR_BOX_BORDER);
 
-  // Advertencia pequeña
   tft.setTextSize(1);
   tft.setTextColor(COLOR_HINT, COLOR_BOX);
   tft.setCursor(25, 166);
@@ -358,10 +336,10 @@ void displayInstruccionesWifi() {
   tft.println("ingresalo de nuevo.");
 }
 
-// ─── Franja de estado "Buscando WiFi.../Bluetooth..." ─────────────────────────
+// Franja inferior: "Buscando WiFi/Bluetooth"
 #define ESTADO_ALTO_LINEA  14
 
-static int estadoBusquedaY() {
+static int alturaFranjaEstado() {
   return tft.height() - (2 * ESTADO_ALTO_LINEA);
 }
 
@@ -375,13 +353,14 @@ static void dibujarLineaEstado(int y, bool conectado, const char* texto) {
   }
 }
 
-void displayEstadoBusqueda(bool wifiConectado, bool btConectado) {
-  int yBase = estadoBusquedaY();
+void mostrarEstadoBusqueda(bool wifiConectado, bool btConectado) {
+  int yBase = alturaFranjaEstado();
   dibujarLineaEstado(yBase,                     wifiConectado, "Buscando WiFi...");
   dibujarLineaEstado(yBase + ESTADO_ALTO_LINEA, btConectado,   "Buscando Bluetooth...");
 }
 
-void displayAlarmFired() {
+// Pantalla: alarma sonando
+void mostrarAlarmaSonando() {
   tft.fillScreen(COLOR_FAIL);
   tft.setTextSize(4);
   tft.setTextColor(COLOR_TITLE, COLOR_FAIL);

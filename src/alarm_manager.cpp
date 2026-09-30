@@ -4,15 +4,13 @@
 #include "wifi_manager.h"
 #include <TFT_eSPI.h>
 
-// Traemos el objeto original tft
 extern TFT_eSPI tft;
 
-// ─── Variables globales ───────────────────────────────────────────────────────
 #define LED_ROJO   26
 #define LED_VERDE  32
 #define LED_AZUL   33
 
-// El estado del BT ahora lo escribe el callback del stack (otra tarea): volatile.
+// La actualiza el callback del stack BT (otra tarea)
 extern volatile bool conectadoBT;
 extern bool oximetroHabilitadoEmisor;
 
@@ -22,41 +20,41 @@ int  alarmMinute        = 0;
 bool alarmFired         = false;
 bool alarmEnabled       = false;
 
-bool comboPlusMinusPressed = false;
+bool comboPlusMinusPressed  = false;
 bool alarmaRecienConfirmada = false;
 
-// Valor temporal mientras el usuario configura
+// Valores temporales mientras se configura
 static int  tempHour    = 7;
 static int  tempMinute  = 0;
-static bool hasPrevious = false;   // si hay alarma guardada en flash
+static bool hasPrevious = false;
 
-// ─── Variables para Aceleración y Fluidez de Pulsado ─────────
+// Control de pulsadores
 static unsigned long buttonPressedTimePlus  = 0;
 static unsigned long buttonPressedTimeMinus = 0;
 static unsigned long lastActionTime         = 0;
 static unsigned long lastPressEnter         = 0;
 static bool          enterEstabaPresionado  = false;
 
-#define LONG_PRESS_DELAY  500   // ms para detectar que se mantiene apretado
-#define REPEAT_INTERVAL   120   // ms de cambio al mantener apretado
+#define LONG_PRESS_DELAY  500   // ms para pulsacion larga
+#define REPEAT_INTERVAL   120   // ms entre repeticiones
 
-// ─── Detección de Combo +/− simultáneos ──────────────────────────────────────
-#define COMBO_HOLD_MS  150   // ms que deben mantenerse juntos para confirmar combo
+// Combo +/- simultaneo
+#define COMBO_HOLD_MS  150
 
-static unsigned long comboStartTime  = 0;
-static bool          comboFired      = false;
+static unsigned long comboStartTime = 0;
+static bool          comboFired     = false;
 
 void encenderLedMomentaneo(uint8_t pin, unsigned long duracionMs);
 void iniciarParpadeoVerde(unsigned long duracionMs);
 
-// Enciende el LED azul fijo (mientras se está configurando la alarma)
+// LED azul fijo mientras se configura la alarma
 static void encenderLedAzulFijo() {
   digitalWrite(LED_ROJO, LOW);
   digitalWrite(LED_VERDE, LOW);
   digitalWrite(LED_AZUL, HIGH);
 }
 
-static bool detectCombo() {
+static bool detectarCombo() {
   bool plusLow  = (digitalRead(BTN_PLUS)  == LOW);
   bool minusLow = (digitalRead(BTN_MINUS) == LOW);
 
@@ -75,8 +73,8 @@ static bool detectCombo() {
   return false;
 }
 
-// ─── Control Fluido de Botón "+" ─────────────────────────────────────────
-static bool handlePlusFluido() {
+// Boton "+" con pulsacion larga y repeticion
+static bool manejarMasFluido() {
   if (digitalRead(BTN_MINUS) == LOW) return false;
 
   unsigned long now = millis();
@@ -97,8 +95,8 @@ static bool handlePlusFluido() {
   return false;
 }
 
-// ─── Control Fluido de Botón "-" ───────────────────────────────────────
-static bool handleMinusFluido() {
+// Boton "-" con pulsacion larga y repeticion
+static bool manejarMenosFluido() {
   if (digitalRead(BTN_PLUS) == LOW) return false;
 
   unsigned long now = millis();
@@ -119,11 +117,8 @@ static bool handleMinusFluido() {
   return false;
 }
 
-// ─── Antirebote para ENTER, ahora SIN bloquear el loop ────────────────────────
-// La version anterior tenia un "while (digitalRead(BTN_ENTER) == LOW);" que
-// congelaba todo el programa mientras el dedo siguiera apoyado. Ahora se
-// detecta el flanco de bajada y se espera la suelta de forma no bloqueante.
-static bool pressedEnter() {
+// Antirrebote de ENTER, no bloqueante
+static bool seDetectoEnter() {
   unsigned long now = millis();
   bool presionado = (digitalRead(BTN_ENTER) == LOW);
 
@@ -138,8 +133,8 @@ static bool pressedEnter() {
   return false;
 }
 
-// ─── Guardar y Cargar desde Memoria Flash  ──────────────────────────────
-static void saveAlarmToFlash() {
+// Guarda la alarma en flash
+static void guardarAlarmaEnFlash() {
   Preferences prefs;
   prefs.begin("alarm", false);
   prefs.putInt("hour",    alarmHour);
@@ -148,7 +143,8 @@ static void saveAlarmToFlash() {
   prefs.end();
 }
 
-static bool loadAlarmFromFlash() {
+// Carga la alarma guardada desde flash
+static bool cargarAlarmaDesdeFlash() {
   Preferences prefs;
   prefs.begin("alarm", false);
 
@@ -161,51 +157,51 @@ static bool loadAlarmFromFlash() {
   return exists;
 }
 
-// ─── Inicialización del Administrador de Alarma ───────────────────────────────
-void alarmManagerInit() {
+// Inicializa pulsadores y carga la alarma guardada
+void iniciarAdministradorAlarma() {
   pinMode(BTN_PLUS,  INPUT_PULLUP);
   pinMode(BTN_MINUS, INPUT_PULLUP);
   pinMode(BTN_ENTER, INPUT_PULLUP);
 
-  hasPrevious = loadAlarmFromFlash();
+  hasPrevious = cargarAlarmaDesdeFlash();
 
   if (hasPrevious) {
     alarmState = STATE_CONFIRM_PREVIOUS;
-    displayConfirmPrevious(alarmHour, alarmMinute);
+    mostrarConfirmarAnterior(alarmHour, alarmMinute);
   } else {
     tempHour   = 7;
     tempMinute = 0;
     alarmState = STATE_SET_HOUR;
     encenderLedAzulFijo();
-    displaySetHour(tempHour);
+    mostrarConfigurarHora(tempHour);
   }
 }
 
-// ─── Bucle Principal del Administrador de Alarma ─────────────────────────────
-void alarmManagerLoop(struct tm timeinfo) {
-  if (alarmState == STATE_ACTIVE && detectCombo()) {
+// Bucle principal de la maquina de estados
+void actualizarAdministradorAlarma(struct tm timeinfo) {
+  if (alarmState == STATE_ACTIVE && detectarCombo()) {
     comboPlusMinusPressed = true;
-    Serial.println("[COMBO] +/- detectado: solicitando apagado de oximetro.");
+    Serial.println("[COMBO] +/- detectado.");
     buttonPressedTimePlus  = 0;
     buttonPressedTimeMinus = 0;
     return;
   }
 
-  bool pPlus  = handlePlusFluido();
-  bool pMinus = handleMinusFluido();
+  bool pPlus  = manejarMasFluido();
+  bool pMinus = manejarMenosFluido();
 
   switch (alarmState) {
-    // ── Pantalla de Confirmación de Alarma Anterior ───────────────────────────
+    // Confirmar alarma anterior
     case STATE_CONFIRM_PREVIOUS:
       if (pPlus || pMinus) {
         tempHour   = alarmHour;
         tempMinute = alarmMinute;
         alarmState = STATE_SET_HOUR;
         encenderLedAzulFijo();
-        displayResetMenuState();
-        displaySetHour(tempHour);
+        reiniciarEstadoMenu();
+        mostrarConfigurarHora(tempHour);
       }
-      else if (pressedEnter()) {
+      else if (seDetectoEnter()) {
         alarmEnabled = true;
         alarmFired   = false;
         tft.fillScreen(TFT_BLACK);
@@ -214,56 +210,54 @@ void alarmManagerLoop(struct tm timeinfo) {
 
         iniciarParpadeoVerde(2000);
 
-        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
+        mostrarReloj(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiEstaConectado(), conectadoBT);
       }
       break;
 
-    // ── Configurar hora ───────────────────────────────────────────────────────
+    // Configurar hora
     case STATE_SET_HOUR:
       if (pPlus) {
         tempHour = (tempHour + 1) % 24;
-        displaySetHour(tempHour);
+        mostrarConfigurarHora(tempHour);
       }
       else if (pMinus) {
         tempHour = (tempHour - 1 + 24) % 24;
-        displaySetHour(tempHour);
+        mostrarConfigurarHora(tempHour);
       }
-      else if (pressedEnter()) {
-        alarmHour  = tempHour;
-
-        displayResetMenuState();
-
+      else if (seDetectoEnter()) {
+        alarmHour = tempHour;
+        reiniciarEstadoMenu();
         alarmState = STATE_SET_MINUTE;
-        displaySetMinute(tempHour, tempMinute);
+        mostrarConfigurarMinutos(tempHour, tempMinute);
       }
       break;
 
-    // ── Configurar minutos ────────────────────────────────────────────────────
+    // Configurar minutos
     case STATE_SET_MINUTE:
       if (pPlus) {
         tempMinute = (tempMinute + 5) % 60;
-        displaySetMinute(tempHour, tempMinute);
+        mostrarConfigurarMinutos(tempHour, tempMinute);
       }
       else if (pMinus) {
         tempMinute = (tempMinute - 5 + 60) % 60;
-        displaySetMinute(tempHour, tempMinute);
+        mostrarConfigurarMinutos(tempHour, tempMinute);
       }
-      else if (pressedEnter()) {
+      else if (seDetectoEnter()) {
         alarmMinute  = tempMinute;
         alarmEnabled = true;
         alarmFired   = false;
-        saveAlarmToFlash();
+        guardarAlarmaEnFlash();
         tft.fillScreen(TFT_BLACK);
         alarmState = STATE_ACTIVE;
         alarmaRecienConfirmada = true;
 
         iniciarParpadeoVerde(2000);
 
-        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiIsConnected(), conectadoBT);
+        mostrarReloj(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, wifiEstaConectado(), conectadoBT);
       }
       break;
 
-    // Reloj activo -----------------------------------------------
+    // Reloj activo
     case STATE_ACTIVE:
       if (!(timeinfo.tm_hour == alarmHour && timeinfo.tm_min == alarmMinute)) {
         alarmFired = false;
@@ -272,32 +266,27 @@ void alarmManagerLoop(struct tm timeinfo) {
   }
 }
 
-// ─── Redibujado forzado de la pantalla actual ─────────────────────────────────
-// Usa tempHour/tempMinute (internos de este archivo) para reconstruir la
-// pantalla de configuracion si corresponde, o el reloj si la alarma ya esta
-// activa. Pensado para "recuperar" la pantalla despues de un mensaje que la
-// tapo por completo (ej: confirmacion de conexion WiFi).
-void alarmManagerRedraw(struct tm timeinfo, bool oximetroActivo, bool wifiConectado, bool btConectado) {
+// Redibuja la pantalla actual (tras un aviso temporal que la tapo)
+void redibujarAdministradorAlarma(struct tm timeinfo, bool oximetroActivo, bool wifiConectado, bool btConectado) {
   switch (alarmState) {
     case STATE_CONFIRM_PREVIOUS:
-      displayConfirmPrevious(alarmHour, alarmMinute);
+      mostrarConfirmarAnterior(alarmHour, alarmMinute);
       break;
 
     case STATE_SET_HOUR:
-      displayResetMenuState();
+      reiniciarEstadoMenu();
       encenderLedAzulFijo();
-      displaySetHour(tempHour);
+      mostrarConfigurarHora(tempHour);
       break;
 
     case STATE_SET_MINUTE:
-      displayResetMenuState();
-      // displaySetMinute ya dibuja la hora fija en gris cuando arranca de cero
-      displaySetMinute(tempHour, tempMinute);
+      reiniciarEstadoMenu();
+      mostrarConfigurarMinutos(tempHour, tempMinute);
       break;
 
     case STATE_ACTIVE:
-      lastMinute = -1;   // fuerza a displayClock a redibujar aunque el minuto no cambie
-      displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroActivo, wifiConectado, btConectado);
+      UltimoMinuto = -1;   // fuerza el redibujado del reloj
+      mostrarReloj(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroActivo, wifiConectado, btConectado);
       break;
   }
 }

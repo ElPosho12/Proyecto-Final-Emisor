@@ -2,8 +2,8 @@
 
 #include <WebServer.h>
 
-// Servidor accesible desde main si hace falta
+// Servidor accesible desde otros modulos
 extern WebServer server;
 
-void webServerInit();
-void webServerLoop();
+void iniciarServidorWeb();
+void actualizarServidorWeb();

@@ -8,73 +8,70 @@
 #include "display_manager.h"
 #include <nvs_flash.h>
 
-// ─── Bluetooth ────────────────────────────────────────────────────────────────
+// Datos del receptor que buscara por bluetooth
 BluetoothSerial SerialBT;
-const char* SLAVE_NAME = "ESP32_Receptor";
+const char* Receptor = "ESP32_Receptor";
 
-// conectadoBT ahora la actualiza el callback del stack BT (otra tarea),
-// por eso es volatile. alarm_manager.cpp la declara igual.
+// Se asegura de inicializar en '0' la variable "conectadoBT"
 volatile bool conectadoBT = false;
 
-// Cache de la MAC del receptor: evita el inquiry en los arranques siguientes.
+// Cache de la MAC del receptor
 static uint8_t       peerMac[6]      = {0};
 static volatile bool hayMac          = false;
 static volatile bool debeGuardarMac  = false;
 static uint8_t       fallosSeguidos  = 0;
 static TaskHandle_t  tareaBTHandle   = NULL;
 
-#define DISCOVER_MS      4000   // ventana de inquiry (solo si no hay MAC guardada)
-#define RETRY_MAC_MS     1200   // reintento cuando conectamos por MAC (barato)
-#define RETRY_SCAN_MS    3000   // reintento despues de un inquiry fallido
-#define MAX_FALLOS_MAC   3      // tras N fallos por MAC, volver a escanear
+#define DISCOVER_MS      4000   // ventana de inquiry
+#define RETRY_MAC_MS     1200   // reintento por MAC
+#define RETRY_SCAN_MS    3000   // reintento tras inquiry fallido
+#define MAX_FALLOS_MAC   3      // fallos antes de re-escanear
 
-// ─── Asignación de Pines del LED RGB ──────────────────────────────────────────
+// LEDs
 #define LED_ROJO   26
 #define LED_VERDE  32
 #define LED_AZUL   33
 
-// ─── Temporización No Bloqueante ──────────────────────────────────────────────
-unsigned long alarmStartTime = 0;
-bool alarmActive = false;
+// Temporizacion no bloqueante
+unsigned long TiempoAlarma = 0;
+bool InicioAlarma = false;
 
-// Variables para el control de los destellos momentáneos del LED
+// Destellos momentaneos del LED
 unsigned long tApagadoLedMomentaneo = 0;
 bool ledMomentaneoActivo = false;
 
-// Variables para el parpadeo VERDE al confirmar la alarma
-unsigned long tFinParpadeoVerde  = 0;
+// Parpadeo verde al confirmar alarma
+unsigned long tFinParpadeoVerde = 0;
 bool ledParpadeoVerdeActivo = false;
 
-// Estado local para saber si el usuario apagó el oxímetro remoto
+// Estado local del oximetro remoto
 bool oximetroHabilitadoEmisor = true;
 
-// Variable de control para el redibujado del reloj
-extern int lastMinute;
+extern int UltimoMinuto;
 
-// Estados anteriores para detectar el momento exacto de la conexión
+// Estados anteriores para detectar flancos de conexion
 bool lastWifiState = false;
 bool lastBTState   = false;
 
-// Avisos temporales de pantallas completas
+// Avisos temporales de pantalla completa
 #define MENSAJE_DURACION_MS  2500
 
-bool          mostrandoMensajeWifi = false;
+bool mostrandoMensajeWifi = false;
 unsigned long tFinMensajeWifi      = 0;
 
-bool          mostrandoMensajeBT   = false;
-unsigned long tFinMensajeBT       = 0;
+bool mostrandoMensajeBT = false;
+unsigned long tFinMensajeBT      = 0;
 
-// Instrucciones iniciales de configuración de WiFi: solo aparecen si todavía
-// no hay SSID/clave guardados, y solo una vez al arrancar, durante 10 s.
+// Instrucciones iniciales de WiFi (solo si no hay SSID guardado)
 #define INSTRUCCIONES_WIFI_DURACION_MS  10000
-bool          mostrandoInstruccionesWifi = false;
+bool mostrandoInstruccionesWifi = false;
 unsigned long tFinInstruccionesWifi      = 0;
 
-// Franja inferior "Buscando WiFi.../Bluetooth...": se redibuja cada 200 ms
+// Franja "Buscando WiFi/Bluetooth"
 #define ESTADO_BUSQUEDA_INTERVALO_MS 200
 unsigned long tUltimoEstadoBusqueda = 0;
 
-// ─── Funciones auxiliares del LED ─────────────────────────────────────────────
+// Prende un LED por un tiempo determinado
 void encenderLedMomentaneo(uint8_t pin, unsigned long duracionMs) {
   digitalWrite(LED_ROJO, LOW);
   digitalWrite(LED_VERDE, LOW);
@@ -85,6 +82,7 @@ void encenderLedMomentaneo(uint8_t pin, unsigned long duracionMs) {
   ledMomentaneoActivo = true;
 }
 
+// Arranca el parpadeo verde
 void iniciarParpadeoVerde(unsigned long duracionMs) {
   digitalWrite(LED_ROJO, LOW);
   digitalWrite(LED_AZUL, LOW);
@@ -92,7 +90,7 @@ void iniciarParpadeoVerde(unsigned long duracionMs) {
   ledParpadeoVerdeActivo = true;
 }
 
-// ─── Persistencia de la MAC del receptor ──────────────────────────────────────
+// Carga la MAC del receptor guardada en NVS
 static void cargarMacDesdeNVS() {
   Preferences p;
   p.begin("btlink", true);
@@ -101,69 +99,70 @@ static void cargarMacDesdeNVS() {
   hayMac = (n == 6);
 
   if (hayMac) {
-    Serial.printf("[BT] MAC del receptor en cache: %02X:%02X:%02X:%02X:%02X:%02X\n",
-                  peerMac[0], peerMac[1], peerMac[2],
-                  peerMac[3], peerMac[4], peerMac[5]);
+    Serial.printf("[BT] MAC en cache: %02X:%02X:%02X:%02X:%02X:%02X\n",
+    peerMac[0], peerMac[1], peerMac[2],
+    peerMac[3], peerMac[4], peerMac[5]);
   } else {
-    Serial.println("[BT] Sin MAC cacheada: el primer arranque hara un inquiry.");
+    Serial.println("[BT] Sin MAC cacheada.");
   }
 }
 
+// Guarda la MAC del receptor en NVS
 static void guardarMacEnNVS() {
   Preferences p;
   p.begin("btlink", false);
   p.putBytes("peer", peerMac, 6);
   p.end();
-  Serial.println("[BT] MAC del receptor guardada en NVS.");
+  Serial.println("[BT] MAC guardada.");
 }
 
-// ─── Callback del stack SPP: estado de conexión sin polling ───────────────────
-static void btCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t* param) {
-  if (event == ESP_SPP_OPEN_EVT) {                  // conexion saliente abierta
+// Callback de eventos del stack Bluetooth
+static void manejarEventoBT(esp_spp_cb_event_t event, esp_spp_cb_param_t* param) {
+  if (event == ESP_SPP_OPEN_EVT) {
     if (param->open.status != ESP_SPP_SUCCESS) return;
     conectadoBT    = true;
     fallosSeguidos = 0;
     memcpy(peerMac, param->open.rem_bda, 6);
     hayMac         = true;
-    debeGuardarMac = true;                          // la escritura ocurre en loop()
-    Serial.println("[BT] Conectado al receptor.");
+    debeGuardarMac = true;
+    Serial.println("[BT] Conectado.");
 
-  } else if (event == ESP_SPP_SRV_OPEN_EVT) {       // conexion entrante
+  } else if (event == ESP_SPP_SRV_OPEN_EVT) {
     if (param->srv_open.status != ESP_SPP_SUCCESS) return;
     conectadoBT    = true;
     fallosSeguidos = 0;
     memcpy(peerMac, param->srv_open.rem_bda, 6);
     hayMac         = true;
     debeGuardarMac = true;
-    Serial.println("[BT] Receptor conectado (entrante).");
+    Serial.println("[BT] Conectado (entrante).");
 
   } else if (event == ESP_SPP_CLOSE_EVT) {
     conectadoBT = false;
-    Serial.println("[BT] Conexion cerrada.");
+    Serial.println("[BT] Desconectado.");
   }
 }
 
-// ─── Inquiry: solo cuando no tenemos una MAC util ─────────────────────────────
+// Busca al receptor por nombre y conecta
 static bool buscarPorNombreYConectar() {
-  Serial.println("[BT] Inquiry buscando el receptor por nombre...");
+  Serial.println("[BT] Buscando receptor...");
   BTScanResults* res = SerialBT.discover(DISCOVER_MS);
   if (!res) return false;
 
   int count = res->getCount();
   for (int i = 0; i < count; i++) {
     BTAdvertisedDevice* dev = res->getDevice(i);
-    if (String(dev->getName().c_str()) != String(SLAVE_NAME)) continue;
+    if (String(dev->getName().c_str()) != String(Receptor)) continue;
 
     BTAddress addr = dev->getAddress();
-    Serial.printf("[BT] Encontrado en %s, conectando...\n", addr.toString().c_str());
+    Serial.printf("[BT] Encontrado en %s.\n", addr.toString().c_str());
     return SerialBT.connect(*addr.getNative());
   }
 
-  Serial.println("[BT] El receptor no aparecio en este inquiry.");
+  Serial.println("[BT] No se encontro el receptor.");
   return false;
 }
 
-// ─── Tarea de conexión (core 0): no bloquea el loop de Arduino ────────────────
+// Tarea de conexion BT en el core 0
 static void tareaConexionBT(void* /*arg*/) {
   for (;;) {
     if (conectadoBT) {
@@ -174,10 +173,10 @@ static void tareaConexionBT(void* /*arg*/) {
     bool ok = false;
 
     if (hayMac && fallosSeguidos < MAX_FALLOS_MAC) {
-      ok = SerialBT.connect(peerMac);     // page directo, sin inquiry
+      ok = SerialBT.connect(peerMac);
       if (!ok) {
         fallosSeguidos++;
-        Serial.printf("[BT] Fallo la conexion por MAC (%u/%u).\n",
+        Serial.printf("[BT] Fallo conexion por MAC (%u/%u).\n",
                       fallosSeguidos, (unsigned)MAX_FALLOS_MAC);
       }
     } else {
@@ -191,7 +190,10 @@ static void tareaConexionBT(void* /*arg*/) {
 
 void setup() {
   Serial.begin(115200);
-
+  pinMode(BTN_ENTER, INPUT_PULLUP);
+  delay(50);
+  Serial.printf("[DIAG] GPIO25 (ENTER) al arrancar: %s\n", 
+                digitalRead(BTN_ENTER) == LOW ? "LOW (presionado)" : "HIGH (suelto)");
   esp_err_t err = nvs_flash_init();
   if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
       ESP_ERROR_CHECK(nvs_flash_erase());
@@ -199,9 +201,8 @@ void setup() {
   }
   ESP_ERROR_CHECK(err);
 
-  Serial.println("Memoria NVS Inicializada con exito!");
+  Serial.println("NVS inicializada.");
 
-  // Inicialización de Pines del LED RGB
   pinMode(LED_ROJO, OUTPUT);
   pinMode(LED_VERDE, OUTPUT);
   pinMode(LED_AZUL, OUTPUT);
@@ -209,81 +210,79 @@ void setup() {
   digitalWrite(LED_VERDE, LOW);
   digitalWrite(LED_AZUL, LOW);
 
-  displayInit();
+  iniciarPantalla();
 
   cargarMacDesdeNVS();
-  SerialBT.register_callback(btCallback);
-  SerialBT.begin("ESP32_Emisor", true);   // true = master
+  SerialBT.register_callback(manejarEventoBT);
+  SerialBT.begin("ESP32_Emisor", true);
   xTaskCreatePinnedToCore(tareaConexionBT, "BTLink", 4096, NULL, 1, &tareaBTHandle, 0);
 
-  wifiInit();
-  webServerInit();
+  iniciarWifi();
+  iniciarServidorWeb();
 
-  alarmManagerInit();
+  iniciarAdministradorAlarma();
 
-  // Si todavia no hay credenciales de WiFi guardadas, tapamos la pantalla
-  // inicial con las instrucciones de configuracion durante 10 segundos.
+  // Si no hay WiFi guardado, mostrar instrucciones por 10s
   if (savedSSID == "") {
-    displayInstruccionesWifi();
+    mostrarInstruccionesWifi();
     mostrandoInstruccionesWifi = true;
     tFinInstruccionesWifi = millis() + INSTRUCCIONES_WIFI_DURACION_MS;
-    Serial.println("[WiFi] Sin credenciales guardadas: mostrando instrucciones de configuracion.");
+    Serial.println("[WiFi] Sin credenciales: mostrando instrucciones.");
   }
 }
 
 void loop() {
-  webServerLoop();
+  actualizarServidorWeb();
   unsigned long now = millis();
 
-  // Escritura diferida de la MAC
   if (debeGuardarMac) {
     debeGuardarMac = false;
     guardarMacEnNVS();
   }
 
-  bool currentWifi = wifiIsConnected();
+  bool currentWifi = wifiEstaConectado();
   bool currentBT   = conectadoBT;
 
-  // Flanco de conexión exitosa del WiFi
+  // Flanco de conexion WiFi
   if (currentWifi && !lastWifiState) {
-    displayWifiConectado();
+    mostrarWifiConectado();
     mostrandoMensajeWifi = true;
     tFinMensajeWifi = now + MENSAJE_DURACION_MS;
     encenderLedMomentaneo(LED_VERDE, MENSAJE_DURACION_MS);
-    Serial.println("[WiFi] Conectado: mostrando aviso en pantalla.");
+    Serial.println("[WiFi] Conectado.");
   }
 
-  // Flanco de conexión exitosa del Bluetooth
+  // Flanco de conexion Bluetooth
   if (currentBT && !lastBTState) {
     if (!mostrandoMensajeWifi && !mostrandoInstruccionesWifi) {
-      displayBtConectado();
+      mostrarBtConectado();
       mostrandoMensajeBT = true;
       tFinMensajeBT = now + MENSAJE_DURACION_MS;
     }
 
     if (alarmState == STATE_ACTIVE) {
       SerialBT.write('3');
-      Serial.println("[BT] Reconexion con alarma ya confirmada: reenviando '3'.");
+      Serial.println("[BT] Reenviando confirmacion de alarma.");
     }
   }
 
   if ((currentWifi && currentBT) && (!lastWifiState || !lastBTState)) {
     encenderLedMomentaneo(LED_AZUL, 1500);
-    Serial.println("[LED] Ambos conectados -> Destello Azul.");
+    Serial.println("[LED] Ambos conectados.");
   }
 
   lastWifiState = currentWifi;
   lastBTState   = currentBT;
 
-  // Franja "Buscando WiFi.../Bluetooth..." abajo de la pantalla
-  if (!mostrandoInstruccionesWifi && !mostrandoMensajeWifi && !mostrandoMensajeBT && !alarmActive &&
+  // Franja "Buscando WiFi/Bluetooth"
+  if (!mostrandoInstruccionesWifi && !mostrandoMensajeWifi && !mostrandoMensajeBT && !InicioAlarma &&
       (now - tUltimoEstadoBusqueda >= ESTADO_BUSQUEDA_INTERVALO_MS)) {
     tUltimoEstadoBusqueda = now;
-    displayEstadoBusqueda(currentWifi, currentBT);
+    mostrarEstadoBusqueda(currentWifi, currentBT);
   }
 
-  // Control de apagado para los destellos momentáneos
-  if (ledMomentaneoActivo && now >= tApagadoLedMomentaneo && !alarmActive) {
+  // Apagado de destellos momentaneos
+  if (ledMomentaneoActivo && now >= tApagadoLedMomentaneo && !InicioAlarma) {
     digitalWrite(LED_ROJO, LOW);
     digitalWrite(LED_VERDE, LOW);
     digitalWrite(LED_AZUL, LOW);
@@ -293,56 +292,53 @@ void loop() {
   struct tm timeinfo;
   bool timeOk = getLocalTime(&timeinfo, 0);
 
-  // Control de temporización de avisos temporales en pantalla
+  // Prioridad de avisos temporales en pantalla
   if (mostrandoInstruccionesWifi) {
     if (now >= tFinInstruccionesWifi) {
       mostrandoInstruccionesWifi = false;
-      // Si mientras tanto ya se disparo algun otro aviso, lo dejamos seguir
-      // su propio timer; si no, restauramos la pantalla normal del estado
-      // actual de la alarma.
       if (!mostrandoMensajeWifi && !mostrandoMensajeBT) {
-        alarmManagerRedraw(timeinfo, oximetroHabilitadoEmisor, currentWifi, currentBT);
+        redibujarAdministradorAlarma(timeinfo, oximetroHabilitadoEmisor, currentWifi, currentBT);
       }
-      Serial.println("[WiFi] Instrucciones terminadas: pantalla restaurada.");
+      Serial.println("[WiFi] Instrucciones terminadas.");
     }
   }
   else if (mostrandoMensajeWifi) {
     if (now >= tFinMensajeWifi) {
       mostrandoMensajeWifi = false;
       if (mostrandoMensajeBT) {
-        displayBtConectado();
+        mostrarBtConectado();
         tFinMensajeBT = now + MENSAJE_DURACION_MS;
       } else {
-        alarmManagerRedraw(timeinfo, oximetroHabilitadoEmisor, currentWifi, currentBT);
-        Serial.println("[WiFi] Aviso terminado: pantalla restaurada.");
+        redibujarAdministradorAlarma(timeinfo, oximetroHabilitadoEmisor, currentWifi, currentBT);
+        Serial.println("[WiFi] Aviso terminado.");
       }
     }
-  } 
+  }
   else if (mostrandoMensajeBT) {
     if (now >= tFinMensajeBT) {
       mostrandoMensajeBT = false;
-      alarmManagerRedraw(timeinfo, oximetroHabilitadoEmisor, currentWifi, currentBT);
-      Serial.println("[BT] Aviso terminado: pantalla restaurada.");
+      redibujarAdministradorAlarma(timeinfo, oximetroHabilitadoEmisor, currentWifi, currentBT);
+      Serial.println("[BT] Aviso terminado.");
     }
-  } 
+  }
   else {
-    alarmManagerLoop(timeinfo);
+    actualizarAdministradorAlarma(timeinfo);
 
-    if (timeOk && alarmState == STATE_ACTIVE && !alarmActive && !ledMomentaneoActivo) {
-      displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, currentWifi, currentBT);
+    if (timeOk && alarmState == STATE_ACTIVE && !InicioAlarma && !ledMomentaneoActivo) {
+      mostrarReloj(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, currentWifi, currentBT);
     }
   }
 
-  // Alarma recién confirmada → habilitar mediciones en el receptor
+  // Alarma confirmada: habilitar mediciones en el receptor
   if (alarmaRecienConfirmada) {
     if (currentBT) {
       SerialBT.write('3');
-      Serial.println("[BT] Alarma confirmada: enviado '3' (habilitar mediciones).");
+      Serial.println("[BT] Mediciones habilitadas.");
     }
     alarmaRecienConfirmada = false;
   }
 
-  // Combo +/− detectado → apagar oxímetro y prender rojo momentáneamente
+  // Combo +/-: apagar oximetro
   if (comboPlusMinusPressed) {
     if (currentBT) {
       SerialBT.write('2');
@@ -351,27 +347,27 @@ void loop() {
       encenderLedMomentaneo(LED_ROJO, 1500);
 
       if (timeOk) {
-        lastMinute = -1;
-        displayClock(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, currentWifi, currentBT);
+        UltimoMinuto = -1;
+        mostrarReloj(timeinfo, alarmHour, alarmMinute, alarmEnabled, oximetroHabilitadoEmisor, currentWifi, currentBT);
       }
     }
     comboPlusMinusPressed = false;
   }
 
-  // Disparar alarma y parpadeo de LED
+  // Disparo de alarma
   if (timeOk && alarmEnabled && !alarmFired) {
     if (timeinfo.tm_hour == alarmHour && timeinfo.tm_min == alarmMinute) {
       alarmFired      = true;
-      alarmActive     = true;
-      alarmStartTime  = now;
+      InicioAlarma     = true;
+      TiempoAlarma  = now;
       if (currentBT) {
         SerialBT.write('1');
       }
-      displayAlarmFired();
+      mostrarAlarmaSonando();
     }
   }
 
-  // Parpadeo VERDE al confirmar la alarma
+  // Parpadeo verde de confirmacion
   if (ledParpadeoVerdeActivo) {
     if ((now / 250) % 2 == 0) {
       digitalWrite(LED_VERDE, HIGH);
@@ -384,8 +380,8 @@ void loop() {
     }
   }
 
-  // Cuando suene la alarma, parpadea en rojo sin trabar el loop
-  if (alarmActive) {
+  // Parpadeo rojo mientras suena la alarma
+  if (InicioAlarma) {
     if ((now / 250) % 2 == 0) {
       digitalWrite(LED_ROJO, HIGH);
       digitalWrite(LED_VERDE, LOW);
@@ -395,9 +391,9 @@ void loop() {
     }
   }
 
-  // Apagar alarma automáticamente tras 1 minuto y volver al menú inicial
-  if (alarmActive && (now - alarmStartTime >= 60000)) {
-    alarmActive = false;
+  // Apagado automatico tras 1 minuto
+  if (InicioAlarma && (now - TiempoAlarma >= 60000)) {
+    InicioAlarma = false;
     digitalWrite(LED_ROJO, LOW);
 
     if (conectadoBT) {
@@ -405,8 +401,8 @@ void loop() {
     }
 
     alarmState = STATE_CONFIRM_PREVIOUS;
-    displayResetMenuState();
-    displayConfirmPrevious(alarmHour, alarmMinute);
+    reiniciarEstadoMenu();
+    mostrarConfirmarAnterior(alarmHour, alarmMinute);
   }
 
   delay(1);

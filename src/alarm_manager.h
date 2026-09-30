@@ -2,40 +2,34 @@
 
 #include <Arduino.h>
 
-// Pines de los pulsadores -------------------------------- 
-#define BTN_PLUS   14   
-#define BTN_MINUS  13   
-#define BTN_ENTER  25 
+// Pines de los pulsadores
+#define BTN_PLUS   14
+#define BTN_MINUS  13
+#define BTN_ENTER  25
 
-//Estados de la máquina de estados ---------------------------- 
+// Estados de la maquina de estados
 enum AlarmState {
   STATE_CONFIRM_PREVIOUS,   // ¿Usar alarma anterior?
   STATE_SET_HOUR,           // Configurar hora
   STATE_SET_MINUTE,         // Configurar minutos
-  STATE_ACTIVE              // Alarma activa, mostrando reloj normal
+  STATE_ACTIVE              // Alarma activa, reloj normal
 };
 
-//Variables globales accesibles desde main -------------------------
+// Variables accesibles desde main
 extern AlarmState alarmState;
 extern int  alarmHour;
 extern int  alarmMinute;
 extern bool alarmFired;
 extern bool alarmEnabled;
 
-// Se pone en true cuando + y − se presionan juntos en STATE_ACTIVE.
-// main.cpp del emisor la lee, envía '2' por BT al receptor, y la hace false.
+// true si se presiono + y - juntos en STATE_ACTIVE
 extern bool comboPlusMinusPressed;
 
-// Se pone en true justo cuando se confirma la alarma (anterior o recién
-// configurada) y se entra en STATE_ACTIVE. main.cpp la lee, envía '3' por BT
-// al receptor (que recién ahí habilita las mediciones del oxímetro), y la hace false.
+// true justo al confirmar la alarma y pasar a STATE_ACTIVE
 extern bool alarmaRecienConfirmada;
 
-//Funciones públicas ----------------------------------------------
-void alarmManagerInit();
-void alarmManagerLoop(struct tm timeinfo);
+void iniciarAdministradorAlarma();
+void actualizarAdministradorAlarma(struct tm timeinfo);
 
-// Redibuja desde cero la pantalla que corresponde al estado actual de la
-// alarma. Se usa despues de que un mensaje temporal (ej: aviso de WiFi
-// conectado) tapo toda la pantalla, para "volver" a donde se estaba.
-void alarmManagerRedraw(struct tm timeinfo, bool oximetroActivo, bool wifiConectado, bool btConectado);
+// Redibuja la pantalla del estado actual (para volver tras un aviso temporal)
+void redibujarAdministradorAlarma(struct tm timeinfo, bool oximetroActivo, bool wifiConectado, bool btConectado);

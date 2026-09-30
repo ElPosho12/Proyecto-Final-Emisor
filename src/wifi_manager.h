@@ -3,12 +3,12 @@
 #include <WiFi.h>
 #include <Preferences.h>
 
-// Estado de la conexión accesible desde otros módulos
+// Estado de conexion, accesible desde otros modulos
 extern bool   wifiConnected;
 extern String savedSSID;
 extern String savedPassword;
 extern String wifiFailReason;
 
-void wifiInit();
-void wifiConnect();
-bool wifiIsConnected();
+void iniciarWifi();
+void conectarWifi();
+bool wifiEstaConectado();
