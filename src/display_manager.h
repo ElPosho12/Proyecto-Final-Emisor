@@ -10,6 +10,7 @@ void iniciarPantalla();
 void mostrarConfirmarAnterior(int hour, int minute);
 void mostrarConfigurarHora(int hour);
 void mostrarConfigurarMinutos(int hour, int minute);
+void mostrarConfirmarNueva(int hour, int minute);
 void mostrarReloj(struct tm timeinfo, int alarmHour, int alarmMinute, bool alarmEnabled, bool oximetroActivo, bool wifiConectado, bool btConectado);
 void mostrarAlarmaSonando();
 void reiniciarEstadoMenu();

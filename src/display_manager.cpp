@@ -119,7 +119,7 @@ void mostrarConfigurarHora(int hour) {
     tft.setTextSize(1);
     tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
     tft.setCursor(35, 55);
-    tft.println("PASO 1/2: Selecciona la Hora");
+    tft.println("PASO 1/3: Selecciona la Hora");
 
     tft.setTextSize(5);
     tft.setTextColor(COLOR_TITLE, COLOR_BOX);
@@ -171,7 +171,7 @@ void mostrarConfigurarMinutos(int hour, int minute) {
     tft.setTextSize(1);
     tft.setTextColor(COLOR_NARANJA, COLOR_BOX);
     tft.setCursor(35, 55);
-    tft.println("PASO 2/2: Selecciona los Minutos");
+    tft.println("PASO 2/3: Selecciona los Minutos");
 
     tft.setTextSize(5);
     tft.setTextColor(COLOR_TITLE, COLOR_BOX);
@@ -191,7 +191,7 @@ void mostrarConfigurarMinutos(int hour, int minute) {
     tft.setTextSize(1);
     tft.setTextColor(COLOR_HINT, COLOR_BG);
     tft.setCursor(35, 186);
-    tft.print("[+] / [-] Ajustar   [ENTER] Guardar");
+    tft.print("[+] / [-] Ajustar   [ENTER] Siguiente");
   }
 
   tft.fillRoundRect(175, 90, 85, 60, 8, COLOR_BG);
@@ -205,6 +205,57 @@ void mostrarConfigurarMinutos(int hour, int minute) {
   tft.print(bufM);
 
   lastMinuteView = minute;
+}
+
+// Pantalla: confirmar alarma nueva (contenido por encima de y=212, donde empieza la franja de estado)
+void mostrarConfirmarNueva(int hour, int minute) {
+  tft.fillScreen(COLOR_BG);
+
+  tft.fillRoundRect(15, 10, 290, 195, 10, COLOR_BOX);
+  tft.drawRoundRect(15, 10, 290, 195, 10, COLOR_BOX_BORDER);
+
+  tft.setTextSize(2);
+  tft.setTextColor(COLOR_TITLE, COLOR_BOX);
+  tft.setCursor(35, 24);
+  tft.println("Confirmar Alarma");
+
+  tft.setTextSize(1);
+  tft.setTextColor(COLOR_OK, COLOR_BOX);
+  tft.setCursor(35, 48);
+  tft.println("PASO 3/3: Revisa tu alarma");
+
+  // Hora elegida
+  tft.fillRoundRect(60, 75, 200, 65, 8, COLOR_BG);
+  tft.drawRoundRect(60, 75, 200, 65, 8, COLOR_BOX_BORDER);
+
+  char buf[3];
+  tft.setTextSize(5);
+
+  tft.setTextColor(COLOR_CELESTE, COLOR_BG);
+  tft.setCursor(85, 87);
+  sprintf(buf, "%02d", hour);
+  tft.print(buf);
+
+  tft.setTextColor(COLOR_TITLE, COLOR_BG);
+  tft.setCursor(145, 87);
+  tft.print(":");
+
+  tft.setTextColor(COLOR_NARANJA, COLOR_BG);
+  tft.setCursor(175, 87);
+  sprintf(buf, "%02d", minute);
+  tft.print(buf);
+
+  // Opciones
+  tft.setTextSize(1);
+  tft.setTextColor(COLOR_CELESTE, COLOR_BOX);
+  tft.setCursor(35, 158);
+  tft.print("[+]     Cambiar la hora");
+  tft.setTextColor(COLOR_NARANJA, COLOR_BOX);
+  tft.setCursor(35, 173);
+  tft.print("[-]     Cambiar los minutos");
+  tft.setTextColor(COLOR_OK, COLOR_BOX);
+  tft.setCursor(35, 188);
+  tft.print("[ENTER] Confirmar alarma");
 }
 
 // Pantalla: reloj normal

@@ -12,6 +12,7 @@ enum AlarmState {
   STATE_CONFIRM_PREVIOUS,   // ¿Usar alarma anterior?
   STATE_SET_HOUR,           // Configurar hora
   STATE_SET_MINUTE,         // Configurar minutos
+  STATE_CONFIRM_NEW,        // Confirmar la alarma nueva
   STATE_ACTIVE              // Alarma activa, reloj normal
 };
 

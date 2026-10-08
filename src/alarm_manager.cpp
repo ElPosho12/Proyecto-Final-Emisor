@@ -225,7 +225,6 @@ void actualizarAdministradorAlarma(struct tm timeinfo) {
         mostrarConfigurarHora(tempHour);
       }
       else if (seDetectoEnter()) {
-        alarmHour = tempHour;
         reiniciarEstadoMenu();
         alarmState = STATE_SET_MINUTE;
         mostrarConfigurarMinutos(tempHour, tempMinute);
@@ -243,6 +242,25 @@ void actualizarAdministradorAlarma(struct tm timeinfo) {
         mostrarConfigurarMinutos(tempHour, tempMinute);
       }
       else if (seDetectoEnter()) {
+        alarmState = STATE_CONFIRM_NEW;
+        mostrarConfirmarNueva(tempHour, tempMinute);
+      }
+      break;
+
+    // Confirmar alarma nueva: + vuelve a la hora, - a los minutos, ENTER confirma
+    case STATE_CONFIRM_NEW:
+      if (pPlus) {
+        alarmState = STATE_SET_HOUR;
+        reiniciarEstadoMenu();
+        mostrarConfigurarHora(tempHour);
+      }
+      else if (pMinus) {
+        alarmState = STATE_SET_MINUTE;
+        reiniciarEstadoMenu();
+        mostrarConfigurarMinutos(tempHour, tempMinute);
+      }
+      else if (seDetectoEnter()) {
+        alarmHour    = tempHour;
         alarmMinute  = tempMinute;
         alarmEnabled = true;
         alarmFired   = false;
@@ -282,6 +300,11 @@ void redibujarAdministradorAlarma(struct tm timeinfo, bool oximetroActivo, bool 
     case STATE_SET_MINUTE:
       reiniciarEstadoMenu();
       mostrarConfigurarMinutos(tempHour, tempMinute);
+      break;
+
+    case STATE_CONFIRM_NEW:
+      encenderLedAzulFijo();
+      mostrarConfirmarNueva(tempHour, tempMinute);
       break;
 
     case STATE_ACTIVE:
