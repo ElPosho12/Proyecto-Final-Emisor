@@ -9,8 +9,11 @@ String wifiFailReason = "";
 static const char* AP_SSID = "Despertador-Config";
 static const char* AP_PASS = "12345678";   // WPA2 pide 8 caracteres minimo
 
-// Levanta el portal de configuracion (AP + STA)
+// Levanta el portal de configuracion (AP + STA).
+// Si el AP ya esta activo no hace nada, para no cortar a quien este conectado.
 static void levantarAP() {
+  if (WiFi.getMode() & WIFI_AP) return;
+
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(AP_SSID, AP_PASS);
   Serial.printf("[WiFi] Portal AP en: http://%s\n", WiFi.softAPIP().toString().c_str());
@@ -60,10 +63,9 @@ void conectarWifi() {
     configTime(-3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
     Serial.println("[WiFi] NTP configurado.");
 
-    // Apagar el AP libera radio para el Bluetooth
-    WiFi.softAPdisconnect(true);
-    WiFi.mode(WIFI_STA);
-    Serial.println("[WiFi] AP apagado.");
+    // El AP queda encendido para poder cambiar el WiFi en cualquier momento
+    levantarAP();
+    Serial.printf("[WiFi] Portal AP sigue activo en: http://%s\n", WiFi.softAPIP().toString().c_str());
 
   } else {
     wifiConnected = false;
@@ -87,9 +89,9 @@ void conectarWifi() {
 bool wifiEstaConectado() {
   bool ahora = (WiFi.status() == WL_CONNECTED);
 
-  // Si se cayo la conexion, reabrir el portal
+  // Si se cayo la conexion, avisa y se asegura de que el portal siga activo
   if (wifiConnected && !ahora) {
-    Serial.println("[WiFi] Conexion perdida: reactivando portal.");
+    Serial.println("[WiFi] Conexion perdida: el portal sigue activo.");
     levantarAP();
   }
 
